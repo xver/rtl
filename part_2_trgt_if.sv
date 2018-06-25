@@ -81,27 +81,26 @@ reg        fsm_get_enable;
 // Every mission clock retreive data from initiator 
 always @(posedge clk_0_h)
 begin
+   
    source <= "INITIATOR";
    event_no <= 0;
    event_name <= "data_clk_0";
    fsm_get <= wait_event;
    fsm_get_enable <= 1;
-   freeze_clk[event_no] <= 1;
+   freeze_clk[0] <= 1;
    $display ("---------------TARGET CLK_0 clock is togling---------------");
-  //     get_data ( "INITIATOR", "clk_0", 0);
-  //     $finish;
+    //   $finish;
 end  
  
  /*
 always @(posedge clk_1_h)
 begin
    source <= "INITIATOR";
-   event_no <= 1;
+   event_no <= 5;
    event_name <= "data_clk_1";
    fsm_get <= wait_event;
    fsm_get_enable <= 1;
-   freeze_clk[event_no] <= 1;
-     // get_data ( "INITATOR", "clk_1", 1);
+   freeze_clk[1] <= 1;
   //    $finish;
  end
 
@@ -109,27 +108,72 @@ begin
 always @(posedge clk_2_h)
 begin
    source <= "INITIATOR";
-   event_no <= 2;
+   event_no <= 6;
    event_name <= "data_clk_2";
    fsm_get <= wait_event;
    fsm_get_enable <= 1;
-    //get_data ( "INITIATOR", "clk_2", 2);
+   freeze_clk[2] <= 1;
+
    // $finish;
 end 
 
+
+always @(posedge clk_3_h)
+begin
+   source <= "INITIATOR";
+   event_no <= 7;
+   event_name <= "data_clk_3";
+   fsm_get <= wait_event;
+   fsm_get_enable <= 1;
+   freeze_clk[3] <= 1;
+
+   // $finish;
+end 
+
+*/
 // ... and export block output to initiator
+
+
+
+//for clocks clk_0 ... clk_2 we send empty vectors. The purpose of that, is confirmation, that current clock simulation is finished
+always @(posedge clk_0_h)
+   begin
+     $display ( "TARGET to INITIATOR  send data_clk_0 vector = %h", joined_sut_data[0]);
+     put_data(4, "data_clk_0", "INITIATOR");
+   end  
+  
+ /*
+  always @(posedge clk_1_h)
+   begin
+     $display ( "TARGET to INITIATOR  send data_clk_1 vector = %h", joined_sut_data[1]);
+     put_data(5, "data_clk_1", "INITIATOR");
+    // $finish;
+   end  
+   
+   always @(posedge clk_2_h)
+   begin
+     $display ( "TARGET to INITIATOR  send data_clk_2 vector = %h", joined_sut_data[2]);
+     put_data(6, "data_clk_2", "INITIATOR");
+    // $finish;
+   end  
 
 always @(posedge clk_3_h)
    begin
-     $display ( "TARGET to INITIATOR  send data_clk_1 vector = %h", joined_sut_data[2]);
-     put_data(3, "data_clk_3", "INITIATOR");
+     $display ( "TARGET to INITIATOR  send data_clk_3 vector = %h", joined_sut_data[3]);
+     put_data(7, "data_clk_3", "INITIATOR");
     // $finish;
    end  
 */
 //-----------------------------------------------------------
 // on the edge of utility clock build array for further export to initiator
-always @(posedge clk_i)
+always @(posedge clk_i) begin
+    joined_sut_data[0]   = 1 ;
+    joined_sut_data[1]   = 0 ;
+    joined_sut_data[2]   = 0 ;
     joined_sut_data[3]   = {valid, o_data} ;
+	end
+
+
 
 //...extract target module input values
 always @(posedge clk_i)
@@ -146,9 +190,9 @@ case(fsm_get)
 wait_event :   begin
                  watchdog <= 0;
                  rcv_valid[event_no] <= 0;
-                 fsm_get <= fsm_get_enable ? check_lut : fsm_get;
+                 fsm_get <= fsm_get_enable ? check_lut : fsm_get;				 
                end  
-check_lut  :  begin
+check_lut  :  begin                
                  T_if.fringe_get();
                  if  (T_if.signals_db[event_no].data_valid) begin
                       joined_rcv_data[event_no] <= T_if.data_payloads_db[event_no];
@@ -157,17 +201,17 @@ check_lut  :  begin
                       fsm_get <=  wait_event; 
                       fsm_get_enable <= 0;
 					  freeze_clk[event_no] <= 0;
-                      $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                      
-
+                      $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
                  end
                  else  begin  
-                     if (watchdog > 100) begin
+                     if (watchdog > 10000) begin
                         $display ("watchdog error");
                         $finish;
                      end
                      else begin
                              watchdog<=watchdog+1;
 					         $display ("----------TARGET STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
+							// $finish;
                          end	
                      fsm_get <= check_lut;
                  end      
@@ -211,14 +255,11 @@ end
 		          input string   destination
                   );
      T_if.data_payloads_db[event_no] = joined_sut_data[event_no];
-     T_if.fringe_put ( destination, event_name);
-     //if (!T_if.fringe_put ( destination, event_name) )   begin
-     //  $display ($time, "  Transmit data error !!!");
-     //  $finish;  //??
-     //end		           
+     T_if.fringe_put ( destination, event_name);		           
      $display ("Put data = %h to %s clocked with %s", joined_sut_data[event_no], destination, event_name );	            
   endtask : put_data
 
+  
 //=============================================================================
 
 

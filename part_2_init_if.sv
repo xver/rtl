@@ -113,21 +113,64 @@ always @(posedge clk_0_h)
 /* 
 always @(posedge clk_1_h)
     begin
-         put_data(1, "data_clk_1", "TARGET");
+         put_data(5, "data_clk_1", "TARGET");
  	     $display ("INITIATOR  to TARGET send data_clk_1 vector = %h", joined_sut_data[1]);
          //$finish;
     end  
 
 always @(posedge clk_2_h)
    begin
-         put_data(2, "data_clk_2", "TARGET");
-   	     $display ( "INITIATOR  to TARGET send data_clk_1 vector = %h", joined_sut_data[2]);
+         put_data(6, "data_clk_2", "TARGET");
+   	     $display ( "INITIATOR  to TARGET send data_clk_2 vector = %h", joined_sut_data[2]);
          //$finish;
    end
-*/
+
+always @(posedge clk_3_h)
+   begin
+         put_data(7, "data_clk_3", "TARGET");
+   	     $display ( "INITIATOR  to TARGET send data_clk_3 vector = %h", joined_sut_data[3]);
+         //$finish;
+   end
+
 // Every mission clock retreive data from target 
 /* verilator lint_off COMBDLY */
+
+
+
+
+always @(posedge clk_0_h)    
+   begin
+      source <= "TARGET";
+      event_no <= 4;                  //means clk_0_h from target
+      event_name <= "data_clk_0";
+      fsm_get <= wait_event;
+      fsm_get_enable <= 1;
+	  freeze_clk[0] <= 1;
+   end
 /*
+always @(posedge clk_1_h)    
+   begin
+      source <= "TARGET";
+      event_no <= 1;
+      event_name <= "data_clk_1";
+      fsm_get <= wait_event;
+      fsm_get_enable <= 1;
+	  freeze_clk[1] <= 1;
+   end
+
+
+always @(posedge clk_2_h)    
+   begin
+      source <= "TARGET";
+      event_no <= 2;
+      event_name <= "data_clk_2";
+      fsm_get <= wait_event;
+      fsm_get_enable <= 2;
+	  freeze_clk[2] <= 1;
+   end
+
+
+
 always @(posedge clk_3_h)    
    begin
       source <= "TARGET";
@@ -135,10 +178,9 @@ always @(posedge clk_3_h)
       event_name <= "data_clk_3";
       fsm_get <= wait_event;
       fsm_get_enable <= 1;
-	  freeze_clk[event_no] <= 1;
-   // get_data ( "TARGET", "clk_3", 3);
+	  freeze_clk[3] <= 1;
    end
-
+*/
 
 always @(posedge clk_i)begin
 $display ("------------INITIATOR PROCEEDS ------event name %s", event_name); 
@@ -161,7 +203,7 @@ check_lut  :  begin
 
                  end
                  else  begin  
-                     if (watchdog > 100) begin
+                     if (watchdog > 10000) begin
                        $display ("watchdog error");
                         $finish;
                      end
@@ -174,7 +216,7 @@ check_lut  :  begin
               end
 endcase
 end
-*/
+
 //----------------------------------------------------------
 
 
@@ -184,6 +226,7 @@ always @(posedge clk_i)
     joined_sut_data[0]  = {wen0, i_data0};
     joined_sut_data[1]  = {wen1, i_data1};
     joined_sut_data[2]  = {wen2, i_data2};
+    joined_sut_data[2]  = 0;
    end
 
 //...extract partial signal values from received array(s)
@@ -230,18 +273,10 @@ always @(posedge clk_i)
                   input int      event_no,
 		          input string   event_name,
 		          input string   destination
-                  );
-     
-     
-     
+                  );           
      I_if.data_payloads_db[event_no] = joined_sut_data[event_no];
      I_if.fringe_put ( destination, event_name);
-     //begin
-     //if (!I_if.fringe_put ( destination, event_name))    begin
-     //  $display ($time, "  Transmit data error !!!");
-    //   $finish;  //??
-    // end	
-     $display ("Put data = %h to %s clocked with %s", joined_sut_data[event_no], destination, event_name );	           
+     $display ("Put data = %h to %s clocked with %s event_no = %d", joined_sut_data[event_no], destination, event_name, event_no );	           
       
   endtask : put_data
   
