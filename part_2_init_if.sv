@@ -125,10 +125,11 @@ always @(posedge clk_i) begin
    clk_0_h_d <= clk_0_h;
    fsm_get_enable <= clk_0_h & !clk_0_h_d;
    source <= "TARGET";
-   event_no <= 4;
    event_name <= "data_clk_0";
+   //event_no <= I_if.get_index_by_name_targets_db(event_name);
+   event_no <= 4;
+   $display ("INITIATOR indexed clk_0 with %d", event_no);
    if (get_run_en)
-   freeze_clk[event_no] <= 1;
    $display ("---------------TARGET CLK_0 clock is togling---------------");
 end     
 
@@ -144,7 +145,7 @@ wait_event :   begin
                end				 
 send_vector :  begin
                  $display ( "INITIATOR to TARGET  send data_clk_0 vector = %h", joined_sut_data[0]);
-				  put_data( event_no, "event_name", "TARGET");
+				  put_data( event_no, event_name, source);
                   fsm_get <= get_run_en ? check_lut   :	 wait_event;
                end           
 check_lut   :   begin
@@ -154,10 +155,11 @@ check_lut   :   begin
                       rcv_valid[event_no] <= 1;
                       I_if.signals_db[event_no].data_valid <= 0;
                       fsm_get <=  wait_event; 
-					  freeze_clk[event_no] <= 0;
+					  freeze_clk[4 - event_no] <= 0;
                       $display( "------------ INITIATOR got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
                  end
                  else  begin  
+					 freeze_clk[4 - event_no] <= 1;
                      if (watchdog > 10000) begin
                         $display ("watchdog error");
                         $finish;

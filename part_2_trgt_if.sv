@@ -29,8 +29,8 @@ interface part_2_trgt_if
 		      );
 		      
 parameter N = 9;
-parameter wait_event = 0;
-parameter send_vector = 1;
+parameter  wait_event = 0;
+parameter  send_vector = 1;
 parameter  check_lut = 2;
 parameter  empty_state = 3;
 		      
@@ -53,10 +53,10 @@ reg        clk_0_en = 1;
 reg        clk_1_en = 0;
 reg        clk_2_en = 0;
 reg        clk_3_en = 0;
-
-reg        get_run_en = 1;
-reg        put_run_en = 0;
-reg        clk_0_h_d;
+//Enables
+reg        get_run_en = 1;  //enables get
+reg        put_run_en = 0;  //enables put
+reg        clk_0_h_d;      // retiming
 
    import shunt_dpi_pkg::*;
    shunt_fringe_if T_if;    
@@ -94,10 +94,11 @@ always @(posedge clk_i) begin
    clk_0_h_d <= clk_0_h;
    fsm_get_enable <= clk_0_h & !clk_0_h_d;
    source <= "INITIATOR";
-   event_no <= 0;
    event_name <= "data_clk_0";
+   //event_no <= T_if.get_index_by_name_targets_db(event_name);
+   event_no <= 0;
+   $display ("TARGET indexed clk_0 with %d", event_no);
    if (get_run_en)
-   freeze_clk[0] <= 1;
    $display ("---------------TARGET CLK_0 clock is togling---------------");
 end       
 
@@ -141,7 +142,7 @@ wait_event :   begin
                end				 
 send_vector :  begin
                  $display ( "TARGET to INITIATOR  send data_clk_0 vector = %h", joined_sut_data[0]);
-				  put_data( event_no, "event_name", "INITIATOR");
+				  put_data( event_no, event_name, "INITIATOR");
                   fsm_get <= get_run_en ? check_lut   :	 wait_event;
                end           
 check_lut   :   begin
@@ -155,6 +156,7 @@ check_lut   :   begin
                       $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
                   end
                   else  begin  
+					  freeze_clk[event_no] <= 1;
                       if (watchdog > 10000) begin
                         $display ("watchdog error");
                         $finish;
@@ -177,7 +179,7 @@ end
 		          input string   event_name,
 		          input string   destination
                   );
-     T_if.data_payloads_db[event_no] = joined_sut_data[event_no];
+     T_if.data_payloads_db[event_no] = joined_sut_data[4 - event_no];
      T_if.fringe_put ( destination, event_name);		           
      $display ("Put data = %h to %s clocked with %s", joined_sut_data[event_no], destination, event_name );	            
   endtask : put_data
