@@ -95,8 +95,8 @@ always @(posedge clk_i) begin
    fsm_get_enable <= clk_0_h & !clk_0_h_d;
    source <= "INITIATOR";
    event_name <= "data_clk_0";
-   //event_no <= T_if.get_index_by_name_targets_db(event_name);
-   event_no <= 0;
+   event_no <= T_if.get_index_by_name_signals_db(source,event_name);
+   
    $display ("TARGET indexed clk_0 with %d", event_no);
    if (get_run_en)
    $display ("---------------TARGET CLK_0 clock is togling---------------");
@@ -132,54 +132,57 @@ always @(posedge clk_i)
 //==============================================================
  
 always @(posedge clk_i) begin
-$display ("------------TARGET PROCEEDS ------event name %s", event_name); 
+$display ("------------TARGET PROCEEDS ------event name %s fsm_get %h", event_name,fsm_get); 
 case(fsm_get)
-wait_event :   begin
-                 watchdog <= 0;
-                 rcv_valid[event_no] <= 0;
-                 fsm_get <= fsm_get_enable & put_run_en ? send_vector :
-                            fsm_get_enable & get_run_en ? check_lut   :	 fsm_get;	
-               end				 
-send_vector :  begin
-                 $display ( "TARGET to INITIATOR  send data_clk_0 vector = %h", joined_sut_data[0]);
-				  put_data( event_no, event_name, "INITIATOR");
-                  fsm_get <= get_run_en ? check_lut   :	 wait_event;
-               end           
-check_lut   :   begin
-                  T_if.fringe_get();
-                  if  (T_if.signals_db[event_no].data_valid) begin
-                      joined_rcv_data[event_no] <= T_if.data_payloads_db[event_no];
-                      rcv_valid[event_no] <= 1;
-                      T_if.signals_db[event_no].data_valid <= 0;
-                      fsm_get <=  wait_event; 
-					  freeze_clk[event_no] <= 0;
-                      $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
-                  end
-                  else  begin  
-					  freeze_clk[event_no] <= 1;
-                      if (watchdog > 10000) begin
-                        $display ("watchdog error");
-                        $finish;
-                      end
-                      else begin
-                             watchdog<=watchdog+1;
-					         $display ("----------TARGET STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
-							// $finish;
-                      end	
-                     fsm_get <= check_lut;
-                 end 
-             end				 
-endcase
-end
+  wait_event :   begin
+     watchdog <= 0;
+     rcv_valid[event_no] <= 0;
+     fsm_get <= fsm_get_enable & put_run_en ? send_vector :
+                fsm_get_enable & get_run_en ? check_lut   :	 fsm_get;
+  end
+  
+  send_vector :  begin
+     $display ( "TARGET to INITIATOR  send data_clk_0 vector = %h", joined_sut_data[0]);
+     put_data( event_no, event_name, "INITIATOR");
+     fsm_get <= get_run_en ? check_lut   :	 wait_event;
+  end           
+  check_lut   :   begin
+     T_if.fringe_get();
+     if  (T_if.signals_db[event_no].data_valid) begin
+        joined_rcv_data[event_no] <= T_if.data_payloads_db[event_no];
+        rcv_valid[event_no] <= 1;
+        T_if.signals_db[event_no].data_valid <= 0;
+        fsm_get <=  wait_event; 
+	freeze_clk[event_no] <= 0;
+        $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
+     end
+     else  begin  
+	freeze_clk[event_no] <= 1;
+        if (watchdog > 10000) begin
+           $display ("watchdog error");
+           $finish;
+        end
+        else begin
+           watchdog<=watchdog+1;
+	   $display ("----------TARGET STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
+	   // $finish;
+        end	
+        fsm_get <= check_lut;
+     end 
+  end				 
+endcase // case (fsm_get)
+   
+end // always @ (posedge clk_i)
+   
  
 //=============================================================================
   /* verilator lint_off VARHIDDEN */
   task put_data ( 
                   input int      event_no,
-		          input string   event_name,
-		          input string   destination
+		  input string   event_name,
+		  input string   destination
                   );
-     T_if.data_payloads_db[event_no] = joined_sut_data[4 - event_no];
+     T_if.data_payloads_db[T_if.get_index_by_name_signals_db(destination,event_name)] = joined_sut_data[event_no];
      T_if.fringe_put ( destination, event_name);		           
      $display ("Put data = %h to %s clocked with %s", joined_sut_data[event_no], destination, event_name );	            
   endtask : put_data

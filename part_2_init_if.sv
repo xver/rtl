@@ -126,53 +126,54 @@ always @(posedge clk_i) begin
    fsm_get_enable <= clk_0_h & !clk_0_h_d;
    source <= "TARGET";
    event_name <= "data_clk_0";
-   //event_no <= I_if.get_index_by_name_targets_db(event_name);
-   event_no <= 4;
+   event_no <= I_if.get_index_by_name_signals_db(source,event_name);
    $display ("INITIATOR indexed clk_0 with %d", event_no);
    if (get_run_en)
-   $display ("---------------TARGET CLK_0 clock is togling---------------");
+     $display ("---------------TARGET CLK_0 clock is togling---------------");
 end     
 
 
 always @(posedge clk_i) begin
-$display ("------------INITIATOR PROCEEDS ------event name %s", event_name); 
-case(fsm_get)
-wait_event :   begin
-                 watchdog <= 0;
-                 rcv_valid[event_no] <= 0;
-                 fsm_get <= fsm_get_enable & put_run_en ? send_vector :
-                            fsm_get_enable & get_run_en ? check_lut   :	 fsm_get;	
-               end				 
-send_vector :  begin
-                 $display ( "INITIATOR to TARGET  send data_clk_0 vector = %h", joined_sut_data[0]);
-				  put_data( event_no, event_name, source);
-                  fsm_get <= get_run_en ? check_lut   :	 wait_event;
-               end           
-check_lut   :   begin
-                 I_if.fringe_get();
-                 if  (I_if.signals_db[event_no].data_valid) begin
-                      joined_rcv_data[event_no] <= I_if.data_payloads_db[event_no];
-                      rcv_valid[event_no] <= 1;
-                      I_if.signals_db[event_no].data_valid <= 0;
-                      fsm_get <=  wait_event; 
-					  freeze_clk[4 - event_no] <= 0;
-                      $display( "------------ INITIATOR got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
-                 end
-                 else  begin  
-					 freeze_clk[4 - event_no] <= 1;
-                     if (watchdog > 10000) begin
-                        $display ("watchdog error");
-                        $finish;
-                     end
-                     else begin
-                             watchdog<=watchdog+1;
-					         $display ("----------INITIATOR STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
-							// $finish;
-                         end	
-                     fsm_get <= check_lut;
-                 end 
-             end				 
-endcase  
+$display ("------------INITIATOR PROCEEDS ------event name %s fsm_get %h ", event_name,fsm_get); 
+   case(fsm_get)
+     wait_event :   begin
+        watchdog <= 0;
+        rcv_valid[event_no] <= 0;
+        fsm_get <= fsm_get_enable & put_run_en ? send_vector :
+                   fsm_get_enable & get_run_en ? check_lut   :	 fsm_get;	
+     end				 
+     send_vector :  begin
+        $display ( "INITIATOR to TARGET  send data_clk_0 vector = %h", joined_sut_data[0]);
+	put_data( event_no, event_name, source);
+        fsm_get <= get_run_en ? check_lut   :	 wait_event;
+     end           
+     check_lut   :   begin
+        I_if.fringe_get();
+        if  (I_if.signals_db[event_no].data_valid) begin
+           joined_rcv_data[event_no] <= I_if.data_payloads_db[event_no];
+           rcv_valid[event_no] <= 1;
+           I_if.signals_db[event_no].data_valid <= 0;
+           fsm_get <=  wait_event; 
+	   freeze_clk[4 - event_no] <= 0;
+           $display( "------------ INITIATOR got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
+        end
+        else  begin  
+	   freeze_clk[4 - event_no] <= 1;
+           if (watchdog > 10000) begin
+              $display ("watchdog error");
+              $finish;
+           end
+           else begin
+              watchdog<=watchdog+1;
+	      $display ("----------INITIATOR STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
+	      // $finish;
+           end	
+           fsm_get <= check_lut;
+        end // else: !if(I_if.signals_db[event_no].data_valid)
+     end // case: check_lut
+  
+endcase
+  
 end
 //----------------------------------------------------------
 
@@ -226,26 +227,33 @@ always @(posedge clk_i)
 //=============================================================================
  /* verilator lint_off VARHIDDEN */
  
- task put_data ( 
-                  input int      event_no,
-		          input string   event_name,
-		          input string   destination
-                  );           
-     I_if.data_payloads_db[event_no] = joined_sut_data[event_no];
-     I_if.fringe_put ( destination, event_name);
-     $display ("Put data = %h to %s clocked with %s event_no = %d", joined_sut_data[event_no], destination, event_name, event_no );	           
+   task put_data ( 
+                   input int      event_no,
+		   input string   event_name,
+		   input string   destination
+                   );
+      string 			  s_me = "put_data()";
       
-  endtask : put_data
-  
-//==============================================================
-/*
-task wait_clk_i(input integer clock_num, input integer current_cnt);
-   forever
-     if (current_cnt + clock_num > i_clk_cnt)
-         break;
-     
- endtask: wait_clk_i
-*/		 		      		      
-		      
+      $display ("%s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+      
+      if (I_if.get_index_by_name_signals_db(destination,event_name) >= 0)
+	begin
+	   I_if.data_payloads_db[I_if.get_index_by_name_signals_db(destination,event_name)] = joined_sut_data[event_no];
+	   I_if.fringe_put ( destination, event_name);
+	   $display ("%s data = %h to %s clocked with %s event_no=%0d",s_me,joined_sut_data[event_no], destination, event_name, event_no );	           
+	end
+      else $display ("ERROR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+   endtask : put_data
+   
+   //==============================================================
+   /*
+    task wait_clk_i(input integer clock_num, input integer current_cnt);
+    forever
+    if (current_cnt + clock_num > i_clk_cnt)
+    break;
+    
+    endtask: wait_clk_i
+    */		 		      		      
+   
 		      
 endinterface : part_2_init_if
