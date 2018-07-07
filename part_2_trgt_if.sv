@@ -146,30 +146,37 @@ case(fsm_get)
      put_data( event_no, event_name, "INITIATOR");
      fsm_get <= get_run_en ? check_lut   :	 wait_event;
   end           
+  
   check_lut   :   begin
-     T_if.fringe_get();
-     if  (T_if.signals_db[event_no].data_valid) begin
-        joined_rcv_data[event_no] <= T_if.data_payloads_db[event_no];
-        rcv_valid[event_no] <= 1;
-        T_if.signals_db[event_no].data_valid <= 0;
-        fsm_get <=  wait_event; 
-	freeze_clk[event_no] <= 0;
-        $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
-     end
-     else  begin  
-	freeze_clk[event_no] <= 1;
-        if (watchdog > 10000) begin
-           $display ("watchdog error");
-           $finish;
-        end
-        else begin
-           watchdog<=watchdog+1;
-	   $display ("----------TARGET STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
-	   // $finish;
-        end	
-        fsm_get <= check_lut;
-     end 
-  end				 
+     if (!T_if.fringe_get()) $display ( "ERROR: %s get",T_if.who_iam());
+     else $display ( "OK: %s get event_no=%0d",T_if.who_iam(),event_no);
+     for (int event_index=0;event_index<$size(T_if.signals_db);event_index++)
+       begin
+	  if  (T_if.signals_db[event_index].data_valid == 1) begin
+	     joined_rcv_data[event_index] <= T_if.data_payloads_db[event_index];
+             rcv_valid[event_index] <= 1;
+             T_if.signals_db[event_index].data_valid <= 0;
+             fsm_get <=  wait_event; 
+	     freeze_clk[event_index] <= 0;
+             $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_index], source, event_name);                                         
+	  end // if (T_if.signals_db[event_index].data_valid == 1)
+	  else  begin  
+	     freeze_clk[event_index] <= 1;
+             if (watchdog > 10000) begin
+		$display ("watchdog error");
+		$finish;
+             end // if (watchdog > 10000)
+	     else begin
+		watchdog<=watchdog+1;
+		$display ("----------TARGET STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
+		// $finish;
+             end // else: !if(watchdog > 10000)
+             fsm_get <= check_lut;
+	  end // else: !if(T_if.signals_db[event_index].data_valid == 1)
+       end // foreach (T_if.signals_db[event_index])
+  end // case: check_lut
+  
+				 
 endcase // case (fsm_get)
    
 end // always @ (posedge clk_i)
@@ -177,16 +184,24 @@ end // always @ (posedge clk_i)
  
 //=============================================================================
   /* verilator lint_off VARHIDDEN */
-  task put_data ( 
-                  input int      event_no,
-		  input string   event_name,
-		  input string   destination
-                  );
-     T_if.data_payloads_db[T_if.get_index_by_name_signals_db(destination,event_name)] = joined_sut_data[event_no];
-     T_if.fringe_put ( destination, event_name);		           
-     $display ("Put data = %h to %s clocked with %s", joined_sut_data[event_no], destination, event_name );	            
-  endtask : put_data
-
+  
+   task put_data ( 
+                   input int      event_no,
+		   input string   event_name,
+		   input string   destination
+                   );
+      string 			  s_me = "put_data()";
+      
+      $display ("%s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+      
+      if (I_if.get_index_by_name_signals_db(destination,event_name) >= 0)
+	begin
+	   I_if.data_payloads_db[I_if.get_index_by_name_signals_db(destination,event_name)] = joined_sut_data[event_no];
+	   I_if.fringe_put ( destination, event_name);
+	   $display ("%s data = %h to %s clocked with %s event_no=%0d",s_me,joined_sut_data[event_no], destination, event_name, event_no );	           
+	end
+      else $display ("ERROR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+   endtask : put_data
   
 //=============================================================================
 
