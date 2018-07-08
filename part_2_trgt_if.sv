@@ -93,7 +93,7 @@ reg        clk_0_h_d;      // retiming
 always @(posedge clk_i) begin
    clk_0_h_d <= clk_0_h;
    fsm_get_enable <= clk_0_h & !clk_0_h_d;
-   source <= "INITIATOR";
+   source <= "TARGET";
    event_name <= "data_clk_0";
    event_no <= T_if.get_index_by_name_signals_db(source,event_name);
    
@@ -102,7 +102,7 @@ always @(posedge clk_i) begin
    $display ("---------------TARGET CLK_0 clock is togling---------------");
 end       
 
-
+//git debug
 
 
 // ... and export block output to initiator
