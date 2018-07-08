@@ -200,7 +200,7 @@ end // always @ (posedge clk_i)
 	   T_if.fringe_put ( destination, event_name);
 	   $display ("%s data = %h to %s clocked with %s event_no=%0d",s_me,joined_sut_data[event_no], destination, event_name, event_no );	           
 	end
-      else $display ("ERROR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+      else $display ("ERROR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,T_if.get_index_by_name_signals_db(destination,event_name));
    endtask : put_data
   
 //=============================================================================
