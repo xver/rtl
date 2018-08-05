@@ -56,12 +56,12 @@ reg    clk_2_en = 0;
 reg    clk_3_en = 0;
 
 reg    get_run_en = 1;
-reg    put_run_en = 0;
+reg    put_run_en = 1;
 reg        clk_0_h_d;
 
 
    import shunt_dpi_pkg::*;
-   shunt_fringe_if I_if; 
+   shunt_fringe_if I_if(clk_i); 
    bit 	   Result;
    cs_header_t      h;
    string  S;

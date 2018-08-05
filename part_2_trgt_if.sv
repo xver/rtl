@@ -54,13 +54,13 @@ reg        clk_1_en = 0;
 reg        clk_2_en = 0;
 reg        clk_3_en = 0;
 //Enables
-reg        get_run_en = 0;  //enables get
+reg        get_run_en = 1;  //enables get
 reg        put_run_en = 1;  //enables put
 reg        clk_0_h_d;      // retiming
 reg  [8:0] vect_dbg = 0;
 
    import shunt_dpi_pkg::*;
-   shunt_fringe_if T_if;    
+   shunt_fringe_if T_if(clk_i);    
    cs_header_t      h;
    initial
      begin: registration
@@ -87,7 +87,11 @@ reg  [8:0] vect_dbg = 0;
 	$display("Target registration: End ");
 	//
      end : registration
-   
+
+   //to finish sims after 1000 clk_i
+   always @(posedge clk_i)
+     if(T_if.get_time() > 1000) $finish();
+    
 //----------------------------------------------------------
 // Every mission clock retreive data from initiator 
 
