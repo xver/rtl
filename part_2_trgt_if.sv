@@ -138,58 +138,7 @@ always @(posedge clk_i)
       {wen2, i_data2} = rcv_valid[2] ?   joined_rcv_data[2] : {wen2, i_data2};
   end
 //==============================================================
-/* 
-always @(posedge clk_i) begin
-$display ("------------TARGET PROCEEDS ------event name %s fsm_get %h", event_name,fsm_get); 
-case(fsm_get)
-  wait_event :   begin
-     watchdog <= 0;
-     rcv_valid[event_no] <= 0;
-     fsm_get <= fsm_get_enable & put_run_en ? send_vector :
-                fsm_get_enable & get_run_en ? check_lut   :	 fsm_get;
-  end
-  
-  send_vector :  begin
-     $display ( "TARGET to INITIATOR  send data_clk_0 vector = %h", joined_sut_data[0]);
-     put_data( event_no, event_name, "INITIATOR");
-     fsm_get <= get_run_en ? check_lut   :	 wait_event;
-  end           
-  
-  check_lut   :   begin
-     if (!T_if.fringe_get())
-            $display ( "ERROR: %s get",T_if.who_iam());
-     else
-            $display ( "OK: %s get event_no=%0d",T_if.who_iam(),event_no);
-     //for (int event_index=0;event_index<$size(T_if.signals_db);event_index++)
-     //  begin
-	  if  (T_if.signals_db[event_no].data_valid == 1) begin
-	        joined_rcv_data[event_no] <= T_if.data_payloads_db[event_no];
-             rcv_valid[event_no] <= 1;
-             T_if.signals_db[event_no].data_valid <= 0;
-             fsm_get <=  wait_event; 
-	         freeze_clk[event_no] <= 0;
-             $display( "------------ TARGET got data = %h from %s clocked with %s", joined_rcv_data[event_no], source, event_name);                                         
-	  end // if (T_if.signals_db[event_no].data_valid == 1)
-	  else  begin  
-	         freeze_clk[event_no] <= 1;
-             if (watchdog > 10000) begin
-		          $display ("watchdog error");
-		          $finish;
-               end // if (watchdog > 10000)
-	         else begin
-		           watchdog<=watchdog+1;
-		           $display ("----------TARGET STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
-            end // else: !if(watchdog > 10000)
-            fsm_get <= check_lut;
-	 end // else: !if(T_if.signals_db[event_no].data_valid == 1)
-    //end // foreach (T_if.signals_db[event_no])
-  end // case: check_lut
-  
-				 
-endcase // case (fsm_get)
-   
-end // always @ (posedge clk_i)
- */  
+
 
 
 always @(posedge clk_i) begin
