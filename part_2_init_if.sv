@@ -7,7 +7,7 @@
 /* verilator lint_off MULTIDRIVEN */
 `include "../../include/cs_common.svh"
 interface part_2_init_if (
-                           input   clk_i,     //  utility clock
+                                   input   clk_i,     //  utility clock
 		                   input   clk_0_h,	 //  mission/functional clocks	      
 		                   input   clk_1_h,	 //	      
 		                   input   clk_2_h,	 //	      
