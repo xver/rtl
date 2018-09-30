@@ -68,7 +68,7 @@ reg        clk_0_h_d;
    real    Temp;
    
    
-   string 	target_db_name;  
+   string 	SrcDst_db_name;  
 
    initial
      begin: registration
@@ -82,19 +82,19 @@ reg        clk_0_h_d;
 	is_free_entry = 0;
 	Result = I_if.set_iam("INITIATOR");
 	Result = I_if.set_simid(`SIM_ID);
-	Result = I_if.init_targets_db();
+	Result = I_if.init_SrcDsts_db();
 	//REGISTRATION
-	I_if.Target.n_signals = 10;
-	Result = I_if.print_targets_db();
+	I_if.SrcDst.n_signals = 10;
+	Result = I_if.print_SrcDsts_db();
 	I_if.init_signals_db();
 	I_if.print_signals_db();
 	$display("i am : %s",I_if.who_iam());
 	I_if.tcp_init();
 
-	//Target registration
-	index =  I_if.check_idle_entry_targets_db();
+	//SrcDst registration
+	index =  I_if.check_idle_entry_SrcDsts_db();
 	//$display("i am : %s free_entry index=%0d ,",I_if.who_iam(),index);
-	//if(is_free_entry && I_if.check_free_entry_targets_db()>=0)  
+	//if(is_free_entry && I_if.check_free_entry_SrcDsts_db()>=0)  
 	//
 	while(index >= 0)
 	  begin
@@ -105,10 +105,10 @@ reg        clk_0_h_d;
 	        index = -1;
 	       	$display("REGISTRATION ERROR : %s,",I_if.who_iam());
 	     end
-	     if(index>=0) index =  I_if.check_idle_entry_targets_db();
+	     if(index>=0) index =  I_if.check_idle_entry_SrcDsts_db();
 	     //
 	  end // while (index >= 0)
-	Result = I_if.print_targets_db();
+	Result = I_if.print_SrcDsts_db();
 	$display("Initiator registration: End");
 	//
      end : registration

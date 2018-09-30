@@ -79,7 +79,7 @@ reg  [8:0] vect_dbg = 0;
 	//REGISTRATION
 	h.trnx_id    = `SIM_ID;
 	Result=0;
-	Result = T_if.target_registration_request(h,"TARGET");
+	Result = T_if.SrcDst_registration_request(h,"TARGET");
 	if (Result) T_if.print_reg_header(h);
 	else  $display("REGISTRATION ERROR : %s,",T_if.who_iam());
 	//
