@@ -5,7 +5,8 @@
 /* verilator lint_off UNOPTFLAT */
 /* verilator lint_off IMPLICIT */
 /* verilator lint_off MULTIDRIVEN */
-`include "../../include/cs_common.svh"
+
+
 interface part_2_init_if (
                                    input   clk_i,     //  utility clock
 		                   input   clk_0_h,	 //  mission/functional clocks	      
@@ -29,7 +30,11 @@ interface part_2_init_if (
 		                   output valid,           //  imported from target
 		                   output [7:0] o_data     //
 		                 );
-		      
+//`include "../../include/shunt_fringe_if.sv"
+
+   import shunt_dpi_pkg::*;
+   import  shunt_fringe_pkg::*;
+ 
 parameter  N = 9;
 parameter  wait_event = 0;
 parameter  send_vector = 1;
@@ -58,68 +63,92 @@ reg    clk_3_en = 0;
 reg    get_run_en = 1;
 reg    put_run_en = 1;
 reg        clk_0_h_d;
+data_in_t data_get;
+data_in_t data_put;   
+   
 
-
-   import shunt_dpi_pkg::*;
-   shunt_fringe_if I_if(clk_i); 
+   
+   shunt_fringe_if Frng_if (clk_i); 
    bit 	   Result;
    cs_header_t      h;
    string  S;
    real    Temp;
-   
-   
-   string 	SrcDst_db_name;  
-
+   string  SrcDst_db_name;  
+   bit 	   success;
    initial
      begin: registration
 	longint Temp1;
-	bit 	is_free_entry;
 	int 	index;
 	bit [7:0] data_in;
 	
 	$display("Initiator registration: START");
-	//TCP INIT
-	is_free_entry = 0;
-	Result = I_if.set_iam("INITIATOR");
-	Result = I_if.set_simid(`SIM_ID);
-	Result = I_if.init_SrcDsts_db();
-	//REGISTRATION
-	I_if.SrcDst.n_signals = 10;
-	Result = I_if.print_SrcDsts_db();
-	I_if.init_signals_db();
-	I_if.print_signals_db();
-	$display("i am : %s",I_if.who_iam());
-	I_if.tcp_init();
-
-	//SrcDst registration
-	index =  I_if.check_idle_entry_SrcDsts_db();
-	//$display("i am : %s free_entry index=%0d ,",I_if.who_iam(),index);
-	//if(is_free_entry && I_if.check_free_entry_SrcDsts_db()>=0)  
+	begin : srcdsts_db
+	   `INIT_SRCDSTS_DB
+	     //TCP INIT
+	   Result = Frng_if.set_iam("INITIATOR");
+	   Result = Frng_if.set_mystatus(Frng_if.FRNG_INITIATOR_ACTIVE);
+	   Result = Frng_if.set_simid(`SIM_ID);
+	   //
+	   Frng_if.print_localparams();
+	   //
+	   Result = Frng_if.init_SrcDsts_db(Frng_if.N_OF_SRCDSTS);
+	   Result = Frng_if.set_SrcDsts_id();
+	   Result = Frng_if.set_SrcDst_n_signals(,SrcDsts_n_signals);
+	   Result = Frng_if.set_SrcDst_name(,SrcDsts_name);
+	
+	end : srcdsts_db
 	//
-	while(index >= 0)
-	  begin
-	     Result=0;
-	     Result = I_if.initiator_registration(h);
-	     if (Result) I_if.print_reg_header(h);
-	     else begin
-	        index = -1;
-	       	$display("REGISTRATION ERROR : %s,",I_if.who_iam());
-	     end
-	     if(index>=0) index =  I_if.check_idle_entry_SrcDsts_db();
-	     //
-	  end // while (index >= 0)
-	Result = I_if.print_SrcDsts_db();
-	$display("Initiator registration: End");
-	//
+	begin: signals_db
+	   `INIT_SIGNAL_DB
+	   Result = Frng_if.init_signals_db();
+	   foreach(SrcDsts_name[i]) Result = Frng_if.set_signal_name_id(SrcDsts_name[i],signal_name);
+	   foreach(SrcDsts_name[i]) Result = Frng_if.set_signal_type(SrcDsts_name[i],signal_type);
+	   foreach(SrcDsts_name[i]) Result = Frng_if.set_signal_size(SrcDsts_name[i],signal_size);
+	end : signals_db
+	
+	Frng_if.pnp_init();
+	Result = Frng_if.print_SrcDsts_db();
+	Result = Frng_if.print_signals_db();
+	$display("i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
      end : registration
+   //TEMP DEBUG!!! 
+   always @(posedge clk_i) begin
+      if ( Frng_if.get_time() > 2000)   begin
+	  $display("EOS i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
+	 Frng_if.fring_eos();
+	 $finish;
+      end
+   end
    
+  
+   always @(posedge clk_i) begin
+      data_put.data_bit <= "INITIATOR_SEND_DATA_CLK_0_TO_TARGET";
+      if ( Frng_if.get_time() == 10) begin
+	 $display("%s call Frng_if.fringe_api_put data_put.data_bit=%0h @%0d ",Frng_if.who_iam(), data_put.data_bit,Frng_if.get_time());
+	 if (!Frng_if.put_status) Frng_if.fringe_api_put ("TARGET","data_clk_0",Frng_if.SHUNT_BIT,data_put);
+      end
+      if ( Frng_if.get_time() > 100) success <= Frng_if.fringe_api_get ("TARGET","data_clk_1",data_get);
+      if (success)   begin
+         $display("data_clk_1.data_bit=%0h",data_get.data_bit);
+	 $display("data_clk_1.data_logic=%0h",data_get.data_logic);
+      end
+   end
+ 
+
+/* -----\/----- EXCLUDED -----\/-----
+   always @(posedge clk_i) begin
+      Frng_if.get_status <= Frng_if.fringe_api_get(Frng_if.get_status,);
+   end
+ -----/\----- EXCLUDED -----/\----- */
+   
+/* -----\/----- EXCLUDED -----\/-----
    
 //----------------------------------------------------------
 //  Export related partiotion inputs to target
 
 
 // Every mission clock retreive data from target 
-/* verilator lint_off COMBDLY */
+/-* verilator lint_off COMBDLY *-/
 
 
 always @(posedge clk_i) begin
@@ -127,7 +156,7 @@ always @(posedge clk_i) begin
    fsm_get_enable <= clk_0_h & !clk_0_h_d;
    source <= "INITIATOR";
    event_name <= "data_clk_0";
-   event_no <= I_if.get_index_by_name_signals_db(source,event_name);
+   event_no <= Frng_if.get_index_by_name_signals_db(source,event_name);
    $display ("INITIATOR indexed clk_0 with %d", event_no);
    if (get_run_en)
      $display ("---------------INITIATOR CLK_0 clock is togling---------------");
@@ -150,14 +179,14 @@ $display ("------------INITIATOR PROCEEDS ------event name %s fsm_get %h ", even
         fsm_get <= get_run_en ? check_lut   :	 wait_event;
      end           
      check_lut   :   begin
-         if (!I_if.fringe_get())
-            $display ( "ERROR: %s get",I_if.who_iam());
+         if (!Frng_if.fringe_get("TARGET"))
+            $display ( "ERROR: %s get",Frng_if.who_iam());
         else
-        $display ( "OK: %s get event_no=%0d",I_if.who_iam(),event_no); 
-        if  (I_if.signals_db[event_no].data_valid) begin
-           joined_rcv_data[event_no] <= I_if.data_payloads_db[event_no];
+        $display ( "OK: %s get event_no=%0d",Frng_if.who_iam(),event_no); 
+        if  (Frng_if.signals_db[event_no].data_valid) begin
+           joined_rcv_data[event_no] <= Frng_if.data_payloads_db[event_no];
            rcv_valid[clock_number - event_no] <= 1;
-           I_if.signals_db[event_no].data_valid <= 0;
+           Frng_if.signals_db[event_no].data_valid <= 0;
            fsm_get <=  wait_event; 
 	         freeze_clk[clock_number - event_no] <= 0;
            $display( "------------ INITIATOR got data = %h from TARGET clocked with %s", joined_rcv_data[event_no],  event_name);                                         
@@ -173,7 +202,7 @@ $display ("------------INITIATOR PROCEEDS ------event name %s fsm_get %h ", even
 	            $display ("----------INITIATOR STILL WAITING TRANSACTION ---- watchdog counter = %d", watchdog);
            end	
            fsm_get <= check_lut;
-        end // else: !if(I_if.signals_db[event_no].data_valid)
+        end // else: !if(Frng_if.signals_db[event_no].data_valid)
      end // case: check_lut
   
 endcase
@@ -196,9 +225,9 @@ always @(posedge clk_i)
     {valid, o_data} = rcv_valid[3] ? joined_rcv_data[3] :  {valid, o_data};                                    
 
 
+ 
 
-
- /* verilator lint_off VARHIDDEN */
+ /-* verilator lint_off VARHIDDEN *-/
  
    task put_data ( 
                    input int      event_no,
@@ -207,18 +236,19 @@ always @(posedge clk_i)
                    );
       string 			  s_me = "put_data()";
       
-      $display ("%s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+      $display ("INITIATOR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,Frng_if.get_index_by_name_signals_db(destination,event_name));
       
-      if (I_if.get_index_by_name_signals_db(destination,event_name) >= 0)
+      if (Frng_if.get_index_by_name_signals_db(destination,event_name) >= 0)
 	begin
-	   I_if.data_payloads_db[I_if.get_index_by_name_signals_db(destination,event_name)] = joined_sut_data[event_no];
-	   I_if.fringe_put ( destination, event_name);
-	   $display ("%s data = %h to %s clocked with %s event_no=%0d",s_me,joined_sut_data[event_no], destination, event_name, event_no );	           
+	   Frng_if.data_payloads_db[Frng_if.get_index_by_name_signals_db(destination,event_name)] = joined_sut_data[event_no];
+	   Frng_if.fringe_put (destination, event_name);
+	   $display ("INITIATOR: %s data = %h to %s clocked with %s event_no=%0d",s_me,joined_sut_data[event_no], destination, event_name, event_no );	           
 	end
-      else $display ("ERROR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,I_if.get_index_by_name_signals_db(destination,event_name));
+      else $display ("ERROR: %s data= %h to %s.%s event_no = %0d data_payloads_db[%0d]",s_me,joined_sut_data[event_no], destination, event_name, event_no,Frng_if.get_index_by_name_signals_db(destination,event_name));
    endtask : put_data
    
    //==============================================================
+ -----/\----- EXCLUDED -----/\----- */
   	      		      
    
 		      
