@@ -64,7 +64,9 @@ reg        clk_0_h_d;      // retiming
 reg  [8:0] vect_dbg = 0;
 //
 data_in_t data_get;
-data_in_t data_put;      
+data_in_t data_put; 
+bit put_success;
+bit get_success; 
 //
    bit 	   success;
    
@@ -94,7 +96,7 @@ data_in_t data_put;
 	//
 
 	
-	Frng_if.pnp_init();
+	if(!Frng_if.pnp_init()) $display("ERROR: %s Frng_if.pnp_init()",Frng_if.who_iam());
 	
 	begin: signals_db
 	   `INIT_SIGNAL_DB
@@ -130,7 +132,7 @@ data_in_t data_put;
       end
       if ( Frng_if.get_time() == 500) begin
 	 $display("%s call Frng_if.fringe_api_put Frng_if.put.data_bit=%0h @%0d ",Frng_if.who_iam(), data_put.data_bit,Frng_if.get_time());
-	 if (!Frng_if.put_status) Frng_if.fringe_api_put ("INITIATOR","data_clk_1",Frng_if.SHUNT_BIT,data_put);
+	 if (!Frng_if.put_status) put_success = Frng_if.fringe_api_put ("INITIATOR","data_clk_1",Frng_if.SHUNT_BIT,data_put);
       end
    end // always @ (posedge clk_i)
    

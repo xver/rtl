@@ -65,6 +65,9 @@ reg    put_run_en = 1;
 reg        clk_0_h_d;
 data_in_t data_get;
 data_in_t data_put;   
+
+bit  put_success;
+bit  get_success;
    
 
    
@@ -106,7 +109,7 @@ data_in_t data_put;
 	   foreach(SrcDsts_name[i]) Result = Frng_if.set_signal_size(SrcDsts_name[i],signal_size);
 	end : signals_db
 	
-	Frng_if.pnp_init();
+	if(!Frng_if.pnp_init()) $display("ERROR: %s Frng_if.pnp_init()",Frng_if.who_iam());
 	Result = Frng_if.print_SrcDsts_db();
 	Result = Frng_if.print_signals_db();
 	$display("i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
@@ -125,7 +128,8 @@ data_in_t data_put;
       data_put.data_bit <= "INITIATOR_SEND_DATA_CLK_0_TO_TARGET";
       if ( Frng_if.get_time() == 10) begin
 	 $display("%s call Frng_if.fringe_api_put data_put.data_bit=%0h @%0d ",Frng_if.who_iam(), data_put.data_bit,Frng_if.get_time());
-	 if (!Frng_if.put_status) Frng_if.fringe_api_put ("TARGET","data_clk_0",Frng_if.SHUNT_BIT,data_put);
+	 if (!Frng_if.put_status) put_success = Frng_if.fringe_api_put ("TARGET","data_clk_0",Frng_if.SHUNT_BIT,data_put);
+	 if(!put_success)  $display("ERROR: %s Frng_if.fringe_api_put",Frng_if.who_iam());
       end
       if ( Frng_if.get_time() > 100) success <= Frng_if.fringe_api_get ("TARGET","data_clk_1",data_get);
       if (success)   begin
