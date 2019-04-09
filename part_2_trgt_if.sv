@@ -73,7 +73,8 @@ bit get_success;
    cs_header_t      h;
    
 /*------------------------------------  HUB Definitions  ------------------------------------------*/
- typedef enum { clk6, clk7, clk8, clk11} all_mission_clocks;
+// typedef enum { clk6, clk7, clk8, clk11} all_mission_clocks;
+ typedef enum { data_clk_0,data_clk_1, data_clk_2, data_clk_3 } all_mission_clocks;
 
 typedef enum {INITIATOR} block;
 
@@ -115,6 +116,7 @@ bit                         socket_get_done;
 bit                         socket_put_done;
 string                      target_source;
 string                      current_clock;
+int                         current_active_entry;
 
 
 /*-------------------------------------------------------------------------------------------------*/
@@ -230,13 +232,13 @@ string                      current_clock;
        //defines the topology of clocks/per/partitions
       for (int i=0; i< number_of_clocks; i++) 
 	  arrved_clocks[i] = 0;   
-      row.part = INITIATOR; row.clock = clk6;	row.mask = 0;
+      row.part = INITIATOR; row.clock = data_clk_0;	row.mask = 0;
       cntrl_table[0] = row;
-      row.part = INITIATOR; row.clock = clk7;	row.mask = 0;
+      row.part = INITIATOR; row.clock = data_clk_1;	row.mask = 0;
       cntrl_table[1] = row;
-      row.part = INITIATOR; row.clock = clk8;	row.mask = 0;
+      row.part = INITIATOR; row.clock = data_clk_2;	row.mask = 0;
       cntrl_table[2] = row;
-      row.part = INITIATOR; row.clock = clk11;  row.mask = 0;
+      row.part = INITIATOR; row.clock = data_clk_3;     row.mask = 0;
       cntrl_table[3] = row;
 
   endfunction
@@ -256,9 +258,9 @@ string                      current_clock;
  	  	 if (fsm_run == 0) begin		     //fsm is not working
  		     fetch_entry_pp();  		     //take the task attribute from the pool
  		     if (r_cnt <= w_cnt) begin               //check pool read/write pointers    
- 		     	 fsm_run = 1;
+ 		     	 fsm_run <= 1;
  		   	 if (socket_put_done == 1) begin       // get operation with c socket completed success
- 		   	     fsm_run = 0;
+ 		   	     fsm_run <= 0;
 			 end    
  	  	     end
  	  	 end
@@ -266,32 +268,36 @@ string                      current_clock;
  	  end
 
 
-         
+
+
+        
      always @(posedge clk_i)  
         case (get_state)	
             0 :   if (fsm_run == 1) begin
-	              get_state = 1;	 
+	              get_state <= 1;	 
 		 end        
 	    1 :   if (socket_put_done == 1) 
-		       get_state = 0;                        // back to idle state
-		  else  begin
-		      socket_put_done <= run_fringe_put(entry_from_pool, 0);
+		       get_state <= 0;                        // back to idle state
+		  else  begin		       
+		           current_active_entry <= entry_from_pool[0];
+                           socket_put_done <= run_fringe_put(current_active_entry);
 		  end    
         endcase
    
 
-    function bit run_fringe_put (int pentry_, int block_n_);
+    function bit run_fringe_put (int pentry_);
        row_t      current_row_;
        string     current_destination_;
        string     current_clock_;
        data_in_t  put_data_;
-       bit        put_success_;
+       bit        put_success_ = 0;
     
          current_row_         = cntrl_table[pentry_];
 	 current_destination_ = current_row_.part.name();
          current_clock_       = current_row_.clock.name();
 	 put_data_            = current_row_.data_to_send;	 
-	 //put_success_         = Frng_if.fringe_api_put (current_destination_, current_clock_, Frng_if.SHUNT_BIT, put_data_);
+	 if (!Frng_if.put_status)
+	      put_success_  = Frng_if.fringe_api_put (current_destination_, current_clock_, 1'b1, put_data_);
          return put_success_;    
     endfunction
 
