@@ -1,7 +1,7 @@
 /* WIDTH */
 /* verilator lint_off UNUSED */
 /* verilator lint_off UNDRIVEN */
-/* verilator lint_off BLKSEQ */
+/*  BLKSEQ */
 /* UNOPTFLAT */
 /* IMPLICIT */
 /* MULTIDRIVEN */
@@ -73,7 +73,7 @@ bit  [3:0] freeze_clk = 0;
 //   bit 	   success;
    
    shunt_fringe_if Frng_if(clk_i);    
-//   cs_header_t      h;
+   cs_header_t      h;
    
 /*------------------------------------  HUB Definitions  ------------------------------------------*/
 // typedef enum { clk6, clk7, clk8, clk11} all_mission_clocks;
@@ -119,7 +119,7 @@ bit  [number_of_blocks-1:0] get_state;
 bit                         socket_put_done;
 //string                      target_source;
 //string                      current_clock;
-int                         current_active_entry;
+int                         current_entry;
 reg			    clk_0_hd;
 reg			    clk_1_hd;
 reg			    clk_2_hd;
@@ -170,7 +170,8 @@ reg			    clk_3_hd;
 	$display("i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
 	//
      end : registration
-   
+ */  
+ 
    //TEMP DEBUG!!! 
    always @(posedge clk_i) begin
       if ( Frng_if.get_time() > 1000) begin	
@@ -179,7 +180,7 @@ reg			    clk_3_hd;
 	 $finish;
       end
    end
- */
+ 
    
 /*
    always @(posedge clk_i) begin
@@ -200,565 +201,294 @@ reg			    clk_3_hd;
 /************************** Connecting to pins (the manual part )********************************/ 
 
      always @(posedge clk_i) begin
-
-                 clk_0_hd  <=  clk_0_h;
-
-                 clk_1_hd  <=  clk_1_h;
-
-                 clk_2_hd  <=  clk_2_h;
-
-                 clk_3_hd  <=  clk_3_h;
-
+        if (freeze_clk == 0) begin
+            clk_0_hd  <=  clk_0_h;
+            clk_1_hd  <=  clk_1_h;
+            clk_2_hd  <=  clk_2_h;
+            clk_3_hd  <=  clk_3_h;
+        end  
      end
 
-    
-
  
-
  
 
      //watching arriving clocks to start the communication process
 
-      always @(posedge clk_i) begin
-
-        arrved_clocks[0] <=  arrved_clocks[0] ? 0 : clk_0_h  &  !clk_0_hd;
-
-        arrved_clocks[1] <=  arrved_clocks[1] ? 0 : clk_1_h  &  !clk_1_hd;
-
-        arrved_clocks[2] <=  arrved_clocks[2] ? 0 : clk_2_h  &  !clk_2_hd;
-
-        arrved_clocks[3] <=  arrved_clocks[3] ? 0 : clk_3_h  &  !clk_3_hd;
-
+      always @(posedge clk_i) begin  
+         if (freeze_clk == 0) begin      
+	   arrved_clocks[0] <=  arrved_clocks[0] ? 0 : clk_0_h  &  !clk_0_hd;
+           arrved_clocks[1] <=  arrved_clocks[1] ? 0 : clk_1_h  &  !clk_1_hd;
+           arrved_clocks[2] <=  arrved_clocks[2] ? 0 : clk_2_h  &  !clk_2_hd;
+           arrved_clocks[3] <=  arrved_clocks[3] ? 0 : clk_3_h  &  !clk_3_hd; 
+	 end  
       end
 
- 
-
 //      always @(posedge clk_i)
-//           check_clock_inputs();
+//       if (empty_p)
+//	   freeze_clk <= 0;
+//       else
+//	     freeze_clk <= 'hf;
+     		  
+	 
+    
+bit freeze, freeze1, freeze2;
 
-//debug
+////ebannyj verilator!!!!
+     always @(posedge clk_i) 
+       if (check_clock_inputs()) begin
+          if  (set_put_bits()) begin
+               r_cnt<= 0;
+	       load_pools();
+	       freeze <= 1;
+	       freeze_clk <= 'hf;
+           end    
+         end
+      else
+        if (get_state == 0) begin
+	     if (empty_p == 0) begin
+	       if (w_cnt != 0) begin
+	          r_cnt<= r_cnt + 1;
+	       end	  
+	    end
+	    else begin
+	         freeze <= 0;
+		 if (!freeze & !freeze1 & !freeze2) begin
+		    freeze_clk <= 0;
+		 end   
+	    end
+	end
 
-always @(arrved_clocks)
- for (int i=0; i<4; i++)
-    $display ("The clock number %d  status is changed -  %b",i, arrved_clocks[i]);
+// stretching freeze_clk...
+      always @(posedge clk_i) begin
+          freeze1 <= freeze;
+  	  freeze2 <= freeze1;	
+      end
 
- 
+
+                    
 
  
 
      //connect  input data ports to data exchange logic
-
-      always @(posedge clk_i) begin
-
-           
-
+      always @(posedge clk_i) begin           
          if (arrved_clocks[0])  begin
-
                     row_de <= cntrl_table[0];
-
-                    row_de.data_to_send.data_bit <= 'h1ff;
-
-                    cntrl_table[0]  <= row_de;
-
-                 end  
-
-    
-
-         if (arrved_clocks[1])  begin
-
-                    row_de <= cntrl_table[1];
-
                     row_de.data_to_send.data_bit <= 'h1aa;
-
-                    cntrl_table[1]  <= row_de;
-
+                    cntrl_table[0]  <= row_de;
                  end  
-
-                      
+    
+         if (arrved_clocks[1])  begin
+                    row_de <= cntrl_table[1];
+                    row_de.data_to_send.data_bit <= 'h155;
+                    cntrl_table[1]  <= row_de;
+                 end  
 
           if (arrved_clocks[2])  begin
-
                     row_de <= cntrl_table[2];
-
-                    row_de.data_to_send.data_bit <= 'h1bb;
-
+                    row_de.data_to_send.data_bit <= 'h133;
                     cntrl_table[2]  <= row_de;
-
                  end
 
-                            
-
           if (arrved_clocks[3])  begin
-
                     row_de <= cntrl_table[3];
-
-                    row_de.data_to_send.data_bit <= {{1015{1'b0}}, valid, o_data[7:0]};
-
+                    row_de.data_to_send.data_bit <={{1015{1'b1}}, {valid, o_data}};
                     cntrl_table[3]  <= row_de;
-
                  end 
-
       end
-
  
 
- 
+ function void set_init_masks();
 
-   function void set_init_masks();
-
+       row_t   row_; 
+ /* verilator lint_off BLKSEQ */
        //defines the topology of clocks/per/partitions
-
-      for (int i=0; i< number_of_clocks; i++)
-
-                  arrved_clocks[i] = 0;  
-
-      row.part = INITIATOR; row.clock = data_clk_0;  row.mask = 0;  row.put_ready = 0;
-
-      cntrl_table[0] = row;
-
-      row.part = INITIATOR; row.clock = data_clk_1;  row.mask = 0;  row.put_ready = 0;
-
-      cntrl_table[1] = row;
-
-      row.part = INITIATOR; row.clock = data_clk_2;  row.mask = 0;  row.put_ready = 0;
-
-      cntrl_table[2] = row;
-
-      row.part = INITIATOR; row.clock = data_clk_3;  row.mask = 0;  row.put_ready = 0;
-
-      cntrl_table[3] = row;
-
- 
-
+      row_.part = INITIATOR; row_.clock = data_clk_0;  row_.mask = 0;  row_.put_ready = 0;
+      cntrl_table[0] = row_;
+      row_.part = INITIATOR; row_.clock = data_clk_1;  row_.mask = 0;  row_.put_ready = 0;
+      cntrl_table[1] = row_;
+      row_.part = INITIATOR; row_.clock = data_clk_2;  row_.mask = 0;  row_.put_ready = 0;
+      cntrl_table[2] = row_;
+      row_.part = INITIATOR; row_.clock = data_clk_3;  row_.mask = 0;  row_.put_ready = 0;
+      cntrl_table[3] = row_;
+/* verilator lint_on BLKSEQ */ 
   endfunction
-/************************** TARGET  LOGIC**********************************************************/
 
+/************************** TARGET  LOGIC**********************************************************/
  
 
       initial begin
-
           set_init_masks();
-
-//          print_table();
-
+          print_table();
+	  freeze = 0;
+      end
+     
+      always @(posedge clk_i)   begin
+         empty_p <= get_empty_p();           
+         case (get_state)
+	   0 :   if (empty_p == 0) begin                // next transaction
+           	     current_entry <= fetch_entry_pp(); // take the task attribute from the pool 
+           	     get_state <= 1;			 
+           	   end	  
+           1 :   if (socket_put_done == 1) begin
+           	     socket_put_done <= 0;				
+           	     get_state <= 0;		 // back to idle state
+           	   end
+           	 else  begin
+           		socket_put_done <= run_fringe_put(current_entry);
+           	      end
+        endcase  
       end
 
  
+    function  bit get_empty_p();
+      if ((w_cnt != 0) &&(r_cnt >= w_cnt))
+          return 1;
+      else
+          return 0;  
+    endfunction
 
-// Launch data exchange for available sockets according the queuee in the pool
-
- 
-
-                 always @(posedge clk_i) begin
-
-                     if (empty_p == 0) begin                        // poot pool is not empty
-
-                                 if (fsm_run == 0) begin                     //fsm is not working
-
-                                   //  fetch_entry_pp();                       //take the task attribute from the pool
-
-                                     if (r_cnt < w_cnt) begin              //check pool read/write pointers   
-
-                                         fetch_entry_pp();                      //take the task attribute from the pool
-
-                                                fsm_run <= 1;
-
-                                                 if (socket_put_done == 1) begin     // get operation with c socket completed success
-
-                                                     fsm_run <= 0;
-
-                                                 end   
-
-                                     end
-
-                                 end
-
-                     end  // if (empty_p ==
-
-                    else begin
-
-                        //   init_read_addr();
-
-                          end              
-
-                  end
-
- 
-
- 
-
- 
-
- 
-
-       
-
-     always @(posedge clk_i) 
-
-        case (get_state)     
-
-            0 :   if (fsm_run == 1) begin
-
-                              get_state <= 1; 
-
-                                  end       
-
-                    1 :   if (socket_put_done == 1) begin
-
-                               socket_put_done <= 0;
-
-                                       get_state <= 0;
-
-                                       fsm_run <= 0;                        // back to idle state
-
-                                    end
-
-                                  else if (empty_p == 0) begin                            
-
-                                           current_active_entry <= entry_from_pool[0];
-
-                                   //        socket_put_done <= run_fringe_put(current_active_entry);
-
-                                  end   
-
-        endcase
-
-  
-
- /*
-
-    function bit run_fringe_put (int pentry_);
-
+ function bit run_fringe_put (int pentry_);
        row_t      current_row_;
-
        string     current_destination_;
-
        string     current_clock_;
-
        data_in_t  put_data_;
-
        bit        put_success_ = 0;
-
-   
-
+  
+            //$display ($time, "    ---->   The entry number %d is taken from the pool", pentry_);
          current_row_         = cntrl_table[pentry_];
-
-                 current_destination_ = current_row_.part.name();
-
+         current_destination_ = current_row_.part.name();
          current_clock_       = current_row_.clock.name();
-
-                 put_data_            = current_row_.data_to_send;              
-
+         put_data_            = current_row_.data_to_send;              
                 // if (!Frng_if.put_status)
-
                 //      put_success_  = Frng_if.fringe_api_put (current_destination_, current_clock_, 1'b1, put_data_);
-
-                 put_success_ = 1;
-
-                 $display ("The entry number %d is taken from the pool", pentry_);
-
+         put_success_ = 1;
          return put_success_;   
+    endfunction
+ 
+    function void load_pools();
+    //this function extracts tranzactions from topology table and sorts between
+    // socket pools
+    /* verilator lint_off BLKSEQ */
 
+    int pool_addr;
+       print_table(); 
+       for (int socket_no=0; socket_no< number_of_blocks; socket_no++) begin
+             socket_name = block'(socket_no);
+             w_cnt = 0;
+             //r_cnt = 0;
+             for (int entry=0; entry< max_rows_no; entry++) begin
+            	row = cntrl_table[entry];
+            	if ((row.part == socket_name) && (row.put_ready != 0)) begin
+            		   //empty_p = 0;
+            		   pool_addr = w_cnt;
+            		   //pool2get[pool_addr] = entry;
+            		   pool2put[pool_addr] = entry;
+            		   //$display ($time, " ---- Loaded entry %d into the pool %s, with address %d", entry, row.part.name, w_cnt);
+            		   w_cnt++;
+            		   //w_cnt = pool_addr;
+            	end  //if
+             end // for
+       end // for      
+    /* verilator lint_on BLKSEQ */  
+    endfunction
+
+  function  int fetch_entry_pp ();
+    //for given socket, takes the tranzaction id from the get transactions pool, updates pointer
+    // and checks the data avaialibility in the current pool    
+
+    int entry_from_pool_;
+
+             begin
+            	entry_from_pool_ = pool2put[r_cnt];
+            	//$display ($time, "----->>>>Fetch entry from pool #0, addr = %d,  the fetched_entry = %d", r_cnt, entry_from_pool_);
+            	//r_cnt =  r_cnt + 1;;
+            	return  entry_from_pool_; 
+            end
     endfunction
 
  
-*/
+ //function  update_read_addr();
+    
+ 
+ 
  /*
 
     function bit check_data_exch_completed ();
-
-                //for (int k=0; k< number_of_blocks; k=k+1) begin
-
-                  if (empty_p == 0)
-
-                                return 0;
-
-                //end
-
-                return 1;
-
- 
-
+         //for (int k=0; k< number_of_blocks; k=k+1) begin
+           if (empty_p == 0)
+         		 return 0;
+         //end
+         return 1; 
     endfunction
 */
- /*  
 
-    function void clear_pools(); // temporary, convinient for debugging  
-
-       for (int p_add =0; p_add <  number_of_blocks* number_of_clocks; p_add++) begin
-
-                   pool2get[p_add] = 0;
-
-                   pool2put[p_add] = 0;
-
-       end
-
-    endfunction
-*/
- 
-/*
-    function void load_pools();
-
-    //this function extracts tranzactions from topology table and sorts between
-
-    // socket pools
-
-    int pool_addr;
-
- 
-
-       for (int socket_no=0; socket_no< number_of_blocks; socket_no++) begin
-
-                   socket_name = block'(socket_no);
-
-                   w_cnt = 0;
-
-                   for (int entry=0; entry< max_rows_no; entry++) begin
-
-                      row = cntrl_table[entry];
-
-                      if ((row.part == socket_name) && (row.put_ready != 0)) begin
-
-                                 empty_p = 0;
-
-                                 pool_addr = w_cnt;
-
-//                                 pool2get[pool_addr] = entry;
-
-                                 pool2put[pool_addr] = entry;
-
-                                 pool_addr++;
-
-                                 w_cnt = pool_addr;
-
-                                 $display ($time, " ---- Loading entry  into the pool %s, with address %d", row.part.name, w_cnt);
-
-                      end  //if
-
-                   end // for
-
-       end // for
-
-       //clear the table
-
-       set_init_masks();
-
-       print_table();
-
-      
-
-    endfunction
-
- */
-
-/*
-
-    function   void fetch_entry_pg  (int socket_no);
-
-    //for given socket, takes the tranzaction id from the pool, updates pointer
-
-    // and checks the data avaialibility in the current pool
-
-    int pool_addr;
-
-                      begin
-
-                                 pool_addr = r_cnt[socket_no];
-
-                                 entry_from_pool[socket_no] = pool2get[pool_addr];
-
-                                 pool_addr++;
-
-                                 r_cnt[socket_no] = pool_addr;
-
-                                 if (r_cnt[socket_no] > w_cnt[socket_no])
-
-                                    empty_g[socket_no] = 1;
-
-                     end
-
-    endfunction
-
-*/
-
- 
-
-    function   void fetch_entry_pp ();
-
-    //for given socket, takes the tranzaction id from the get transactions pool, updates pointer
-
-    // and checks the data avaialibility in the current pool
-
-    int pool_addr;
-
-                      begin
-
-                                 pool_addr = r_cnt;
-
-                                 entry_from_pool[0] = pool2put[pool_addr];
-
-                                 pool_addr++;
-
-                                 r_cnt = pool_addr;
-
-                         $display ($time, "----->>>>Fetch entry from pool #0, addr = %d,  the fetched_entry = %d", r_cnt, entry_from_pool[0]);
-
-                                 if (r_cnt > w_cnt)
-
-                                    empty_p = 1;
-
-                     end
-
-    endfunction
-
- 
-
- 
-
- /*
-
-    function void init_read_addr();
-
-     //sets pools address pointers to initial value
-
-       //for (int no=0;no< number_of_blocks; no++) begin
-
-       //    r_cnt[no] =  no* number_of_clocks;
-
-       //end
-
-       r_cnt = 0;
-
-    endfunction
-*/
- 
-
-/* 
-
-    function  check_clock_inputs();
+  function bit  check_clock_inputs();
 
     //  whenever appears one or more clocks edges
-
     //  initiates the following steps:
-
     // 1) defines what partitions participate in data exchange
-
-    // 2) loads pools with sequence of actions
-
-    // 3) resets read pools address counter
-
-   
-
-   
-
+    
     integer total_clocks;
-
        total_clocks = 0;
-
        for (int clock_no=0; clock_no< number_of_clocks; clock_no++) begin
-
                    if (  arrved_clocks[clock_no] == 1'h1 ) begin
-
                       total_clocks++;
-
                    end  //if
-
        end //for
-
        if (total_clocks == 0) begin
-
                    return 0;
-
                 end
-
        else begin
-
-                      /// defines how many data exchanges required with each block   
-
-                //      set_put_bits();
-
-                //      print_table();
-
-                      empty_p = 1'b1;
-
-               //       empty_g = 1'b1;
-
-               //       load_pools();
-
-              //        init_read_addr();
-
+              // defines how many data exchanges required with each block   
+              print_table();
+              return 1;
        end
-
      endfunction
-*/
- 
-
- /*
-
-    function void set_put_bits();
-
-    // this function identifiies rows (entries of the table)
-
-    // that supposed to be active at current time (arrived clock edges);
-
- 
-
-    all_mission_clocks clock_name_;
-
-    int    arrved_clocks_index = 0;
-
- 
-
-      for (int entry=0; entry< max_rows_no; entry++) begin
-
-                  row = cntrl_table[entry];
-
-                  clock_name_ = row.clock;
-
-                  arrved_clocks_index  = all_mission_clocks'(clock_name_);
-
-                  if (arrved_clocks[arrved_clocks_index] == 1)  begin
-
-                      row.put_ready = 1;
-
-                  end //if (arrved_clocks[a
-
-                  if (row.mask == 0)
-
-                    cntrl_table[entry] = row;
-
-      end //  for (int entry
-
-     endfunction
-
- 
-*/
  
 
     function void print_row(int entry);
-
                   $display ( "entry = %d, part = %s, clock = %s, mask = %b, put_ready = %d",
-
                                                                    entry, row.part.name(), row.clock.name(), row.mask, row.put_ready);
-
     endfunction
 
  
-
- /*
+function bit set_put_bits();
+    // this function identifiies rows (entries of the table)
+    // that supposed to be active at current time (arrived clock edges);
+ 
+     all_mission_clocks clock_name_;
+     int    arrved_clocks_index = 0;
+     int    entry_;
+     row_t  row_;
+     
+      set_init_masks();
+      for ( entry_=0; entry_< max_rows_no; entry_++) begin
+            row_ = cntrl_table[entry_];
+            clock_name_ = row_.clock;
+            arrved_clocks_index  = all_mission_clocks'(clock_name_);
+            $display ("    clock = %s, entry = %d,  arrved_clocks_index = %d", row_.clock.name(), entry_, arrved_clocks_index );
+            if (arrved_clocks[arrved_clocks_index] == 1)  begin
+            	row_.put_ready = 1;
+            end //if (arrved_clocks[a
+            if (row_.mask == 0)
+	    /* verilator lint_off BLKSEQ */
+              cntrl_table[entry_] = row_;
+	    /* verilator lint_on BLKSEQ */  
+      end //  for (int entry
+      return 1;
+     endfunction
+ 
 
     function void print_table();
-
+    row_t row_;
      for (int r=0; r <  max_rows_no; r++) begin
-
-                   row =  cntrl_table[r];
-
+     /* verilator lint_off BLKSEQ */
+                   row_ =  cntrl_table[r];
+    /* verilator lint_on BLKSEQ */		   
                    print_row(r);
-
      end
-
     endfunction
-*/
+
  
 
  
