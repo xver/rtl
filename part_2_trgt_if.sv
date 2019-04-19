@@ -65,12 +65,14 @@ bit  [3:0] freeze_clk = 0;
 //reg        clk_0_h_d;      // retiming
 //reg  [8:0] vect_dbg = 0;
 //
-//data_in_t data_get;
-//data_in_t data_put; 
-//bit put_success;
-//bit get_success; 
-//
-//   bit 	   success;
+
+
+data_in_t data_get;
+data_in_t data_put; 
+bit put_success;
+bit get_success; 
+
+   bit 	   success;
    
    shunt_fringe_if Frng_if(clk_i);    
    cs_header_t      h;
@@ -127,12 +129,12 @@ reg			    clk_3_hd;
 
 /*-------------------------------------------------------------------------------------------------*/
       
-   /*
+   
    initial
      begin: registration
 	bit Result;
-//	bit [7:0] data_in_byte;
-//	int 	  socket_id;
+	bit [7:0] data_in_byte;
+	int 	  socket_id;
 		
 	$display("Target registration: START ");
 	//
@@ -170,7 +172,7 @@ reg			    clk_3_hd;
 	$display("i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
 	//
      end : registration
- */  
+   
  
    //TEMP DEBUG!!! 
    always @(posedge clk_i) begin
@@ -181,8 +183,8 @@ reg			    clk_3_hd;
       end
    end
  
-   
-/*
+  /* 
+
    always @(posedge clk_i) begin
        data_put.data_bit <= "TARGET_SEND_DATA_CLK_1_TO_INITIATOR";
       if ( Frng_if.get_time() > 100) success <= Frng_if.fringe_api_get ("INITIATOR","data_clk_0",data_get);
@@ -195,8 +197,8 @@ reg			    clk_3_hd;
 	 if (!Frng_if.put_status) put_success = Frng_if.fringe_api_put ("INITIATOR","data_clk_1",Frng_if.SHUNT_BIT,data_put);
       end
    end // always @ (posedge clk_i)
+   */
    
-*/   
 
 /************************** Connecting to pins (the manual part )********************************/ 
 
@@ -223,12 +225,6 @@ reg			    clk_3_hd;
 	 end  
       end
 
-//      always @(posedge clk_i)
-//       if (empty_p)
-//	   freeze_clk <= 0;
-//       else
-//	     freeze_clk <= 'hf;
-     		  
 	 
     
 bit freeze, freeze1, freeze2;

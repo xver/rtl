@@ -1,36 +1,35 @@
-/* verilator lint_off WIDTH */
-/* verilator lint_off UNUSED */
-/* verilator lint_off UNDRIVEN */
-/* verilator lint_off BLKSEQ */
-/* verilator lint_off UNOPTFLAT */
-/* verilator lint_off IMPLICIT */
-/* verilator lint_off MULTIDRIVEN */
+/* WIDTH */
+/* UNUSED */
+/* UNDRIVEN */
+/* BLKSEQ */
+/* UNOPTFLAT */
+/* IMPLICIT */
+/* MULTIDRIVEN */
 
 
 interface part_2_init_if (
-                                   input   clk_i,     //  utility clock
-		                   input   clk_0_h,	 //  mission/functional clocks	      
-		                   input   clk_1_h,	 //	      
-		                   input   clk_2_h,	 //	      
-		                   input   clk_3_h,   //
+                           input   clk_i,          //  utility clock
+		           input   clk_0_h,	   //  mission/functional clocks	      
+		           input   clk_1_h,	   //	      
+		           input   clk_2_h,	   //	      
+		           input   clk_3_h,        //
 		      
-		                   output  freeze_clk, // block/release mission
-                                              // clock generator, if 
-                                              // data is not received
-		      		  
-		                   input wen0,             // signals exported to target
-		                   input [7:0] i_data0,    //
+		           output  freeze_clk,     // block/release mission
+                                                   // clock generator, if 
+                                                   // data is not received
+		      	
+		           input wen0,             // signals exported to target
+		           input [7:0] i_data0,    //
 		      
-		                   input wen1,             //
-		                   input [7:0] i_data1,    //
+		           input wen1,             //
+		           input [7:0] i_data1,    //
 		      
-		                   input wen2,             //
-		                   input [7:0] i_data2,    //
+		           input wen2,             //
+		           input [7:0] i_data2,    //
 		      
-		                   output valid,           //  imported from target
-		                   output [7:0] o_data     //
+		           output valid,           //  imported from target
+		           output [7:0] o_data     //
 		                 );
-//`include "../../include/shunt_fringe_if.sv"
 
    import shunt_dpi_pkg::*;
    import  shunt_fringe_pkg::*;
@@ -46,10 +45,7 @@ bit        valid;
 bit  [7:0] o_data;
 bit  [3:0] freeze_clk = 0;
 
-string     source;      // will use later to compare   
-
-
-reg        clk_0_h_d;
+/* verilator lint_off UNUSED */ 
 data_in_t  data_get;
 data_in_t  data_put;   
 
@@ -57,7 +53,7 @@ bit        put_success;
 bit        get_success;
    
 
-   
+  
    shunt_fringe_if Frng_if (clk_i); 
    bit 	   Result;
    cs_header_t      h;
@@ -65,56 +61,87 @@ bit        get_success;
    real    Temp;
    string  SrcDst_db_name;  
    bit 	   success;
+/* verilator lint_on UNUSED */   
 /*------------------------------------  HUB Definitions  ------------------------------------------*/
+
+/* verilator lint_off UNDRIVEN */
  typedef enum {clk0, clk1, clk2, clk3,
-              clk4, clk5, clk6, clk7,
-	      clk8, clk9, clk10, clk11,
-	      clk12 } all_mission_clocks;
+              clk4, clk5, data_clk_0, data_clk_1,
+              data_clk_2, clk9,  clk10, clk11,
+              clk12 } all_mission_clocks;
+
+ 
 
 typedef enum {part0, part1, TARGET, part3} block;
+/* verilator lint_on UNDRIVEN */
+ 
 
-block                      part_name;
-all_mission_clocks         clock_name; 
+typedef struct packed { 
+bit      [8:0] data_bit;
+logic    [8:0] data_logic;
+                       } data_in_t;
 
+//block                    part_name;
+//all_mission_clocks       clock_name;
+
+ 
+
+ 
 
 typedef struct    packed     {
 all_mission_clocks            clock;
 block                         part;
 bit                           mask;
-int  	                      put_ready;
+int                           put_ready;
 data_in_t                     data_to_send;
-                             }  row_t;
+                              }  row_t;
 
-
+ 
 block                        socket_name;
-row_t                        row, rowb, cntrl_table[ max_rows_no]; 
+row_t                        cntrl_table[max_rows_no];
 row_t                        row_de;
+
+/* verilator lint_off UNDRIVEN */
 data_in_t                    received_data[max_rows_no];
-data_in_t                    rcvd_data[number_of_blocks]; 
+/* verilator lint_on UNDRIVEN */
+/* verilator lint_off UNUSED */
+data_in_t                    rcvd_data[number_of_blocks];
+/* verilator lint_on UNUSED */  
 
+//string                      block_name;
+/* verilator lint_off UNDRIVEN */
+bit  [number_of_clocks-1:0] arrved_clocks;
+/* verilator lint_on UNDRIVEN */
+int                         w_cnt[number_of_blocks];
+int                         r_cnt[number_of_clocks];                        
 
-string                      block_name;
-bit                         arrved_clocks[ number_of_clocks];
-
-int                         w_cnt[ number_of_blocks];
-int                         r_cnt[ number_of_clocks];                        
-
-int                         pool2put[ number_of_blocks *  number_of_clocks];
+//int                         pool2put[ number_of_blocks *  number_of_clocks];
 int                         pool2get[ number_of_blocks *  number_of_clocks];
-int                         entry_from_pool[number_of_blocks];
-bit                         fsm_run[ number_of_blocks];
-bit                         empty[ number_of_blocks];
+int                         current_entry[number_of_blocks];
+
+
+bit    [number_of_blocks-1:0]       empty_g;
+
 //transaction variables
+
 //bit                         get_state[number_of_blocks];
+
 bit  [number_of_blocks-1:0] get_state;
-bit                         socket_get_done[number_of_blocks];
-string                      target_source[number_of_blocks];
-string                      current_clock[number_of_blocks];
+bit  [number_of_blocks-1:0] socket_get_done;
+//string                      target_source[number_of_blocks];
+//string                      current_clock[number_of_blocks];
 
-
+reg                         clk_0_hd;
+reg                         clk_1_hd;
+reg                         clk_2_hd;
+reg                         clk_3_hd;
+/* verilator lint_off UNUSED */
+bit                         success_load_pools;
+/* verilator lint_on UNUSED */
+ 
 /*-------------------------------------------------------------------------------------------------*/
-   
-   
+  
+ /* verilator lint_off UNUSED */  
    initial
      begin: registration
 	longint Temp1;
@@ -151,16 +178,18 @@ string                      current_clock[number_of_blocks];
 	Result = Frng_if.print_signals_db();
 	$display("i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
      end : registration
+/* verilator lint_on UNUSED */
+
    //TEMP DEBUG!!! 
    always @(posedge clk_i) begin
-      if ( Frng_if.get_time() > 2000)   begin
+      if ( Frng_if.get_time() > 1000)   begin
 	  $display("EOS i am : %s (%s) source(%s)",Frng_if.who_iam(),Frng_if.my_status.name(),Frng_if.my_source);
 	 Frng_if.fring_eos();
 	 $finish;
       end
    end
    
- /* 
+/*
    always @(posedge clk_i) begin
       data_put.data_bit <= "INITIATOR_SEND_DATA_CLK_0_TO_TARGET";
       if ( Frng_if.get_time() == 10) begin
@@ -173,88 +202,125 @@ string                      current_clock[number_of_blocks];
          $display("data_clk_1.data_bit=%0h",data_get.data_bit);
 	 $display("data_clk_1.data_logic=%0h",data_get.data_logic);
       end
-   end
+  end
   */
 /************************** Connecting to pins (the manual part )********************************/
 
 
      //watching arriving clocks to start the communication process
       always @(posedge clk_i) begin
-        arrved_clocks[6] <=  clk_0_h;   
-        arrved_clocks[7] <=  clk_1_h;   
-        arrved_clocks[8] <=  clk_2_h;   
-        arrved_clocks[11] <= clk_3_h;   
+        clk_0_hd  <=  clk_0_h;
+        clk_1_hd  <=  clk_1_h;
+        clk_2_hd  <=  clk_2_h;
+        clk_3_hd  <=  clk_3_h;
+      end
+      
+
+     always @(posedge clk_i) begin
+        arrved_clocks[6]  <=  arrved_clocks[6]   ? 0 : clk_0_h  &  !clk_0_hd;
+        arrved_clocks[7]  <=  arrved_clocks[7]   ? 0 : clk_1_h  &  !clk_1_hd;
+        arrved_clocks[8]  <=  arrved_clocks[8]   ? 0 : clk_2_h  &  !clk_2_hd;
+        arrved_clocks[11] <=  arrved_clocks[11]  ? 0 : clk_3_h  &  !clk_3_hd;
       end
 
-     //connect  input data ports to data exchange logic
-      always @(*) begin
-            
+   
+     always @(posedge clk_i)          
+        if (check_clock_inputs()) begin
+            if  (set_put_bits()) begin
+                success_load_pools <= load_pools();
+                $display ("Load pools competed successfully");
+            end     
+        end
+
+//debug
+
+//bit [12:0] ar_clk;
+ 
+always @(arrved_clocks)
+ for (int i=0; i<13; i++) begin
+    $display ("      The clock number %d  status is changed -  %b",i, arrved_clocks[i]);
+//    ar_clk[i] <=arrved_clocks[i];
+ end 
+   
+      
+//connect  input data ports to data exchange logic
+
+      always @(posedge clk_i) begin           
          if (arrved_clocks[6])  begin
-	    row_de = cntrl_table[8];
-	    row_de.data_to_send.data_bit = {wen0, i_data0};
-	    cntrl_table[8]  = row_de;
-	 end   
-     
+             row_de <= cntrl_table[7];
+             row_de.data_to_send.data_bit <= {wen0, i_data0};
+             cntrl_table[7]  <= row_de;
+           end  
+    
          if (arrved_clocks[7])  begin
-	    row_de = cntrl_table[9];
-	    row_de.data_to_send.data_bit = {wen1, i_data1};
-	    cntrl_table[9]  = row_de;
-	 end   
-	       
-          if (arrved_clocks[10])  begin
-	    row_de = cntrl_table[8];
-	    row_de.data_to_send.data_bit = {wen2, i_data2};
-	    cntrl_table[10]  = row_de;
-	 end
-	             
+            row_de <= cntrl_table[8];
+            row_de.data_to_send.data_bit <= {wen1, i_data1};
+            cntrl_table[8]  <= row_de;
+          end  
+                      
+          if (arrved_clocks[8])  begin
+            row_de <= cntrl_table[9];
+            row_de.data_to_send.data_bit <= {wen2, i_data2};
+            cntrl_table[9]  <= row_de;
+           end                            
+
           if (arrved_clocks[11])  begin
-	    row_de = cntrl_table[11];
-	    row_de.data_to_send.data_bit = $random;;
-	    cntrl_table[11]  = row_de;
-	 end  
+            row_de <= cntrl_table[10];
+	    /* verilator lint_off WIDTH */
+            row_de.data_to_send.data_bit <= $random;
+	    /* verilator lint_on WIDTH */
+            cntrl_table[10]  <= row_de;
+          end 
+
       end
-
-   assign  {o_valid, o_data} = received_data[11]; 
-
+      
+      
+/* verilator lint_off WIDTH */
+   assign  {valid, o_data} = received_data[11]; 
+/* verilator lint_on WIDTH */
 
    function void set_init_masks();
-       //defines the topology of clocks/per/partitions
-      for (int i=0; i< number_of_clocks; i++)
-	  arrved_clocks[i] = 0;   
-  	  row.part = part0; row.clock = clk0;  row.mask = 0;
-  	  cntrl_table[0] = row;
-  	  row.part = part0; row.clock = clk1;  row.mask = 0;
-  	  cntrl_table[1] = row;
-  	  row.part = part0; row.clock = clk2;  row.mask = 0;
-  	  cntrl_table[2] = row;
-  	  row.part = part0; row.clock = clk9;  row.mask = 0;
-  	  cntrl_table[3] = row;
-  	  row.part = part1; row.clock = clk3;  row.mask = 0;
-  	  cntrl_table[4] = row;
-  	  row.part = part1; row.clock = clk4;  row.mask = 0;
-  	  cntrl_table[5] = row;
-  	  row.part = part1; row.clock = clk5;  row.mask = 0;
-  	  cntrl_table[6] = row;
-  	  row.part = part1; row.clock = clk10; row.mask = 0;
-  	  cntrl_table[7] = row;
-  	  row.part = TARGET; row.clock = clk6;  row.mask = 0;
-  	  cntrl_table[8] = row;
-  	  row.part = TARGET; row.clock = clk7;  row.mask = 0;
-  	  cntrl_table[9] = row;
-  	  row.part = TARGET; row.clock = clk8;  row.mask = 0;
-  	  cntrl_table[10] = row;
-  	  row.part = TARGET; row.clock = clk11; row.mask = 0;
-  	  cntrl_table[11] = row;
-  	  row.part = part3; row.clock = clk9;  row.mask = 0;
-  	  cntrl_table[12] = row;
-  	  row.part = part3; row.clock = clk10; row.mask = 0;
-  	  cntrl_table[13] = row;
-  	  row.part = part3; row.clock = clk11; row.mask = 0;
-  	  cntrl_table[14] = row;
-  	  row.part = part3; row.clock = clk12; row.mask = 0;
-  	  cntrl_table[15] = row;
-  endfunction
 
+       //defines the topology of clocks/per/partitions
+       /* verilator lint_off UNDRIVEN */
+       /* verilator lint_off BLKSEQ */
+       row_t   row_;
+   
+                  row_.part = part0; row_.clock = clk0;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[0] = row_;
+                  row_.part = part0; row_.clock = clk1;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[1] = row_;
+                  row_.part = part0; row_.clock = clk2;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[2] = row_;
+                  row_.part = part0; row_.clock = clk9;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[3] = row_;
+                  row_.part = part1; row_.clock = clk3;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[4] = row_;
+                  row_.part = part1; row_.clock = clk4;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[5] = row_;
+                  row_.part = part1; row_.clock = clk5;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[6] = row_;
+                  row_.part = part1; row_.clock = clk10; row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[7] = row_;
+                  row_.part = TARGET; row_.clock = data_clk_0;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[8] = row_;
+                  row_.part = TARGET; row_.clock = data_clk_1;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[9] = row_;
+                  row_.part = TARGET; row_.clock = data_clk_2;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[10] = row_;
+                  row_.part = TARGET; row_.clock = clk11; row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[11] = row_;
+                  row_.part = part3; row_.clock = clk9;  row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[12] = row_;
+                  row_.part = part3; row_.clock = clk10; row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[13] = row_;
+                  row_.part = part3; row_.clock = clk11; row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[14] = row_;
+                  row_.part = part3; row_.clock = clk12; row_.mask = 0;  row_.put_ready = 0;
+                  cntrl_table[15] = row_;
+                 /* verilator lint_on UNDRIVEN */
+		 /* verilator lint_on BLKSEQ */
+  endfunction
 
 /************************** HUB  LOGIC**********************************************************/
 
@@ -263,185 +329,202 @@ string                      current_clock[number_of_blocks];
           print_table();
       end
 
-// Launch data exchange for available sockets according the queuee in the pool
-      genvar c;
-      generate for (c=0; c< number_of_blocks; c=c+1) begin
- 	  always @(posedge clk_i) begin
- 	     if (empty[c] == 0) begin                        // pool is not empty
- 	  	 if (fsm_run[c] == 0) begin		     //fsm is not working
- 		     fetch_entry_pg(c);  		     //take the task attribute from the pool
- 		     if (r_cnt[c] <= w_cnt[c]) begin       
- 		   	 fsm_run[c] = 1;
- 		   	 if (socket_get_done[c] == 1) begin       // get operation with c socket completed success
- 		   	     fsm_run[c] = 0;
-			 end    
- 	  	     end
- 	  	 end
- 	     end
- 	  end
+ genvar d;
+
+   generate for (d=0; d< number_of_blocks; d=d+1) begin    
+
+        
+     always @(posedge clk_i)   begin
+        empty_g[d] <= get_empty_g(d);           
+        case (get_state[d])
+            0 :   if (empty_g[d] == 0) begin
+                      current_entry[d] <= fetch_entry_pg(d);       // take the task attribute from the pool 
+                      get_state[d] <= 1;                                
+                  end       
+            1 :   if (socket_get_done[d] == 1) begin
+                      socket_get_done[d] <= 0;			      
+                      get_state[d] <= 0; 			  // back to idle state
+                  end
+                     else  begin
+                             socket_get_done[d] <= run_fringe_get(current_entry[d], d);
+                         end
+        endcase  
       end
-                
-  endgenerate      
-
-
-   genvar d;
-   generate for (d=0; d< number_of_blocks; d=d+1) begin     
-         
-     always @(posedge clk_i)  
-      
-        case (get_state[d])	
-            0 :   if (fsm_run[d] == 1) begin
-	              get_state[d] = 1;	 
-		 end        
-	    1 :   if (socket_get_done[d] == 1) 
-		       get_state[d] = 0;                        // back to idle state
-		  else 
-		       socket_get_done[d] <= run_fringe_get(entry_from_pool[d], d);
-        endcase
-   
-     end            
+     end           
     endgenerate
 
-    function bit run_fringe_get (int pentry_, int block_n_);
+/* verilator lint_off UNUSED */
+    function  bit get_empty_g(int block_no_);
+      if (r_cnt[block_no_] >= w_cnt[block_no_])
+          return 1;
+      else
+          return 0;  
+    endfunction
+
+
+    function bit run_fringe_get (int entry_from_pool_, int block_n_);
+    //int        pentry_;
     row_t      current_row_;
     string     current_source_;
     string     current_clock_;
     data_in_t  get_data;
-    bit        done;
-    
-         current_row_    = cntrl_table[pentry_];
-	 current_source_ = current_row_.part.name();
+    bit        done;   
+         current_row_    = cntrl_table[entry_from_pool_];
+         current_source_ = current_row_.part.name();
          current_clock_  = current_row_.clock.name();
-	 done   =  Frng_if.fringe_api_get (current_source_,current_clock_,get_data);
+         done = 1;
+         $display ("    --->>>   The entry number %d is taken from the pool number %d", entry_from_pool_, block_n_);
+         //done   =  Frng_if.fringe_api_get (current_source_,current_clock_,get_data);
          return done;
-    
     endfunction
-
+/* verilator lint_on UNUSED */
+ 
+    /*
 
     function bit check_data_exch_completed ();
-    	for (int k=0; k< number_of_blocks; k=k+1) begin
-    	     if (empty[k] == 0)
-    		return 0;
-    	end
-    	return 1;
- 
+                for (int k=0; k< number_of_blocks; k=k+1) begin
+                     if (empty[k] == 0)
+                                return 0;
+                end
+                return 1; 
     endfunction
-    
-    function void clear_pools(); // temporary, convinient for debugging   
+*/
+/*   
+    function void clear_pools(); // temporary, convinient for debugging  
        for (int p_add =0; p_add <  number_of_blocks* number_of_clocks; p_add++) begin
-   	   pool2get[p_add] = 0;
-   	   pool2put[p_add] = 0;
+                   pool2get[p_add] = 0;
+                   pool2put[p_add] = 0;
        end
     endfunction
-
-    function void load_pools();
-    //this function extracts tranzactions from topology table and sorts between
+*/
+/* verilator lint_off UNUSED */
+/* verilator lint_off BLKSEQ */
+function bit load_pools();
+    //this function extracts transactions from topology table and sorts between
     // socket pools
-    int pool_addr;
 
-       for (int socket_no=0; socket_no< number_of_blocks; socket_no++) begin
- 	   socket_name = block'(socket_no);
- 	   w_cnt[socket_no] = socket_no* number_of_clocks;
- 	   for (int entry=0; entry< max_rows_no; entry++) begin
- 	      row = cntrl_table[entry];
- 	      if ((row.part == socket_name) && (row.put_ready != 0)) begin
- 		 empty[socket_no] = 0;
- 		 pool_addr = w_cnt[socket_no];
- 		 pool2get[pool_addr] = entry;
- 		 pool2put[pool_addr] = entry;
- 		 pool_addr++;
- 		 w_cnt[socket_no] = pool_addr;
- 	      end  //if
- 	   end // for
-       end // for
-    endfunction
+    int     pool_addr;
+    row_t   row_;
  
+       for (int socket_no=0; socket_no< number_of_blocks; socket_no++) begin
+            socket_name = block'(socket_no);
+            w_cnt[socket_no] = socket_no * number_of_clocks;
+            r_cnt[socket_no] = w_cnt[socket_no];
+            $display ("------ INITISLIZED R_CNT = %d", r_cnt[socket_no] );
+            for (int entry_=0; entry_< max_rows_no; entry_++) begin
+               row_ = cntrl_table[entry_];
+               if ((row_.part == socket_name) && (row_.put_ready != 0)) begin
+                  pool_addr = w_cnt[socket_no];
+                  pool2get[pool_addr] = entry_;
+                  //pool2put[pool_addr] = entry_;
+                  pool_addr++;
+                  w_cnt[socket_no] = pool_addr;
+                  $display (" ---- Loading entry_ = %d into the pool %s, with address %d",entry_,  row_.part.name, w_cnt[socket_no]);
+               end  //if
+            end // for
+       end // for
+       return 1;
+    endfunction
+/* verilator lint_on BLKSEQ */
+/* verilator lint_on UNUSED */
 
-    function   void fetch_entry_pg  (int socket_no);
+/* verilator lint_off BLKSEQ */
+     function   int fetch_entry_pg  (int socket_no_);
     //for given socket, takes the tranzaction id from the pool, updates pointer
     // and checks the data avaialibility in the current pool
+
     int pool_addr;
- 	      begin
- 		 pool_addr = r_cnt[socket_no];
- 		 entry_from_pool[socket_no] = pool2get[pool_addr];
- 		 pool_addr++;
- 		 r_cnt[socket_no] = pool_addr;
- 		 if (r_cnt[socket_no] > w_cnt[socket_no])
- 		    empty[socket_no] = 1;
- 	     end
+    int entry_from_pool_;
+                      begin
+                         pool_addr = r_cnt[socket_no_];
+                         entry_from_pool_ = pool2get[pool_addr];
+                         pool_addr = pool_addr + 1;
+                         r_cnt[socket_no_] = pool_addr;
+                         $display ("----->>>>Fetch entry from pool #%d, addr = %d,  the fetched_entry = %d",socket_no_,  r_cnt[socket_no_], entry_from_pool_);
+                          return   entry_from_pool_;
+                     end
     endfunction
-
-
+/* verilator lint_on BLKSEQ */
+/*
     function void init_read_addr();
     //sets pools address pointers to initial value
        for (int no=0;no< number_of_blocks; no++) begin
     	    r_cnt[no] =  no* number_of_clocks;
        end
     endfunction
+*/
 
 
-    function  check_clock_inputs();
+    function  bit check_clock_inputs();
     //  whenever appears one or more clokc edges
     //  initiates the following steps:
     // 1) defines what partitions participate in data exchange
     // 2) loads pools with sequence of actions
     // 3) resets read pools address counter
-    
-    
+      
     integer total_clocks;
        total_clocks = 0;
        for (int clock_no=0; clock_no< number_of_clocks; clock_no++) begin
-    	   if (  arrved_clocks[clock_no] == 1'h1 ) begin
-    	      total_clocks++;
-    	   end  //if
+            if (  arrved_clocks[clock_no] == 1'h1 ) begin
+               total_clocks++;
+            end  //if
        end //for
        if (total_clocks == 0) begin
-    	   return 0;
-    	end
+            return 0;
+          end
        else begin
-    	      /* defines how many data exchanges required with each block   */
-    	      set_put_bits();
-    	      print_table();
-    	      empty = '{ number_of_blocks{1'b1}};
-    	      load_pools();
-    	      init_read_addr();
-       end 
+           return 1;      
+       end
      endfunction
 
-
-
-    function void set_put_bits();
+/* verilator lint_off UNUSED */
+/* verilator lint_off BLKSEQ */
+  function bit set_put_bits();
     // this function identifiies rows (entries of the table)
     // that supposed to be active at current time (arrived clock edges);
-
     all_mission_clocks clock_name_;
     int    arrved_clocks_index = 0;
+    row_t  row_;
+//    int    entry_;
+    bit success_ = 0;
 
-      for (int entry=0; entry< max_rows_no; entry++) begin
-    	  row = cntrl_table[entry];
-    	  clock_name_ = row.clock;
-    	  arrved_clocks_index  = all_mission_clocks'(clock_name_);
-    	  if (arrved_clocks[arrved_clocks_index] == 1)  begin
-    	      row.put_ready = 1; 
-    	  end //if (arrved_clocks[a
-    	  if (row.mask == 0)
-    	    cntrl_table[entry] = row;
-      end //  for (int entry 
+      set_init_masks();
+      print_table();             
+      for (int entry_=0; entry_< max_rows_no; entry_++) begin
+            row_ = cntrl_table[entry_];
+            clock_name_ = row_.clock;
+            arrved_clocks_index  = all_mission_clocks'(clock_name_);
+           // $display ("    clock = %s, entry = %d,  arrved_clocks_index = %d", row_.clock.name(), entry_, arrved_clocks_index );
+            if (arrved_clocks[arrved_clocks_index] == 1)  begin
+           	row_.put_ready = 1;
+           	if (row_.mask == 0)  begin
+           	     cntrl_table[entry_] = row_;
+           	end   
+            end //if (arrved_clocks[a		  
+      end //  for (int entry
+      print_table();
+      success = 1;
+      return  success_;   
      endfunction
+/* verilator lint_on BLKSEQ */
 
-
-    function void print_row(int entry);
-    	  $display ( "entry = %d, part = %s, clock=%s, mask = %b, put_ready= %d",
-    				   entry, row.part, row.clock, row.mask, row.put_ready);
+    function void print_row(int entry_);
+        row_t   row;
+	     row =  cntrl_table[entry_];
+             $display ( "entry = %d, part = %s, clock=%s, mask = %b, put_ready= %d",
+                         entry_, row.part.name(), row.clock.name(), row.mask, row.put_ready);
     endfunction
+/* verilator lint_on UNUSED */
 
-
-    function void print_table();
+ function void print_table();
      for (int r=0; r <  max_rows_no; r++) begin
-    	   row =  cntrl_table[r];
-    	   print_row(r);
+          // row =  cntrl_table[r];
+           print_row(r);
      end
+
     endfunction
+
+
 
 
 		      
