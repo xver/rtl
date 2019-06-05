@@ -1,4 +1,4 @@
-interface top_if (
+interface top_if_a (
 
  input               clk,            
  input               clk_h,          
