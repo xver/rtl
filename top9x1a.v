@@ -43,7 +43,7 @@ wire [2:0]                  valid0;
 wire [3:0]                  freeze_clk = 0;
 
 `ifdef TOP_IF
-top_if         top_if (
+top_if_a         top_if (
 
                 .clk            (clk),
                 .clk_h          (clk_h),
@@ -93,7 +93,7 @@ top_if         top_if (
 `endif
 
 `ifdef SIMPLE_SINGLE0
-part0_if_a part0_if_a  (
+part_if_a part0_if_a  (
                .clk_i    (clk_i),        
                .i_clk    (clk_t[9]),
                .i_clk0   (clk_t[0]),
@@ -128,7 +128,7 @@ part0_if_a part0_if_a  (
 
 
 `ifdef  SIMPLE_SINGLE1
-part1_if_a part1_if_a  (
+part_if_a part1_if_a  (
                .clk_i      (clk_i),
                .i_clk_p    (clk_if[10]),
                .i_clk0_p   (clk_if[3]),
@@ -161,7 +161,7 @@ part1_if_a part1_if_a  (
 `endif		
 
 `ifdef SIMPLE_SINGLE3	
-part3_if_a part3_if_a  (
+part_if_a part3_if_a  (
                .clk_i    (clk_i),
                .i_clk    (clk_t[12]),
                .i_clk0   (clk_t[9]),
@@ -199,7 +199,7 @@ part3_if_a part3_if_a  (
 		
 
 `ifdef SIMPLE_SINGLE2
-part2_if_a part2_if_a  (
+part_if_a part2_if_a  (
            .clk_i    (clk_i),
            .i_clk    (clk_t[11]),
            .i_clk0   (clk_t[6]),
